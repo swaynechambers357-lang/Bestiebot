@@ -4,6 +4,9 @@ const ema=(values,period)=>{if(values.length<period)return null;const k=2/(perio
 const rsi=(v,p=14)=>{if(v.length<p+1)return null;let g=0,l=0;for(let i=v.length-p;i<v.length;i++){const d=v[i]-v[i-1];if(d>0)g+=d;else l-=d;}if(l===0)return 100;const rs=(g/p)/(l/p);return 100-(100/(1+rs));};
 const signal=()=>{const e5=ema(prices,5),e13=ema(prices,13),r=rsi(prices);if(e5==null||e13==null||r==null)return "WAIT";if(e5>e13&&r>50&&r<70)return "RISE";if(e5<e13&&r<50&&r>30)return "FALL";return "WAIT";};
 async function get(url,opts){const r=await fetch(url,opts);const j=await r.json();if(!r.ok)throw new Error(j.error||"Request failed");return j;}
+const feedUrl=x=>x?.data?.url||x?.url||x?.data?.ws_url||x?.ws_url||x?.data?.websocket_url||x?.websocket_url||null;
+const feedSocket=x=>x?.data?.ws_url||x?.ws_url||x?.data?.websocket_url||x?.websocket_url||feedUrl(x);
+const socketUrl=x=>feedSocket(x);
 async function init(){
   const s=await get("/api/session");
   $("#login").style.display=s.authenticated?"none":"block";
