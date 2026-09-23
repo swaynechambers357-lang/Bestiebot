@@ -1,4 +1,7 @@
 const $=s=>document.querySelector(s);
+const prices=[];
+const ema=(values,period)=>{if(values.length<period)return null;const k=2/(period+1);let e=values[0];for(let i=1;i<values.length;i++)e=values[i]*k+e*(1-k);return e;};
+const rsi=(v,p=14)=>{if(v.length<p+1)return null;let g=0,l=0;for(let i=v.length-p;i<v.length;i++){const d=v[i]-v[i-1];if(d>0)g+=d;else l-=d;}if(l===0)return 100;const rs=(g/p)/(l/p);return 100-(100/(1+rs));};
 async function get(url,opts){const r=await fetch(url,opts);const j=await r.json();if(!r.ok)throw new Error(j.error||"Request failed");return j;}
 async function init(){
   const s=await get("/api/session");
@@ -23,5 +26,5 @@ async function init(){
 $("#login").onclick=()=>location.href="/auth/login";
 $("#logout").onclick=async()=>{await get("/api/logout",{method:"POST"});location.reload()};
 $("#connect").disabled=false;
-$("#connect").onclick=async()=>{try{$("#status").textContent="Connecting to R_50…";const id=$("#account").value;const o=await get("/api/otp/"+encodeURIComponent(id),{method:"POST"});const ws=new WebSocket(o.data.url);ws.onopen=()=>{ws.send(JSON.stringify({ticks:"R_50",subscribe:1}));$("#status").textContent="R_50 feed connected ✓";};ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.tick)$("#status").textContent="R_50 • "+m.tick.quote;};ws.onerror=()=>{$("#status").textContent="WebSocket connection error";};}catch(e){$("#status").textContent="Feed error: "+e.message;}};
+$("#connect").onclick=async()=>{try{$("#status").textContent="Connecting to R_50…";const id=$("#account").value;const o=await get("/api/otp/"+encodeURIComponent(id),{method:"POST"});const ws=new WebSocket(o.data.url);ws.onopen=()=>{ws.send(JSON.stringify({ticks:"R_50",subscribe:1}));$("#status").textContent="R_50 feed connected ✓";};ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.tick){const price=Number(m.tick.quote);prices.push(price);if(prices.length>200)prices.shift();$("#status").textContent="R_50 • "+price+" • Memory "+prices.length;}};ws.onerror=()=>{$("#status").textContent="WebSocket connection error";};}catch(e){$("#status").textContent="Feed error: "+e.message;}};
 init().catch(e=>$("#status").textContent=e.message);
