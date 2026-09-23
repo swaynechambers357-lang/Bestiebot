@@ -45,8 +45,31 @@ let ws=null,reconnectTimer=null,manualFeed=false;
 const connectFeed=async()=>{try{clearTimeout(reconnectTimer);$("#status").textContent="Connecting to R_50…";const id=$("#account").value;const o=await get("/api/otp/"+encodeURIComponent(id),{method:"POST"});ws=new WebSocket(o.data.url);ws.onopen=()=>{
   ws.send(JSON.stringify({ticks:"R_50",subscribe:1}));
   ws.send(JSON.stringify({contracts_for:"R_50"}));
+  ws.send(JSON.stringify({
+  proposal:1,
+  amount:1,
+  basis:"stake",
+  contract_type:"CALL",
+  currency:"USD",
+  duration:5,
+  duration_unit:"t",
+  underlying_symbol:"R_50",
+  req_id:501
+}));
   $("#status").textContent="R_50 feed connected ✓";
-};ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.contracts_for){
+  };ws.onmessage=e=>{const m=JSON.parse(e.data);
+
+if(m.req_id===501){
+  if(m.proposal){
+    console.log("Proposal received:",m.proposal);
+    $("#status").textContent="TEST PROPOSAL RECEIVED ✓";
+  }else if(m.error){
+    console.log("Proposal error:",m.error);
+    $("#status").textContent="PROPOSAL ERROR: "+(m.error.message||"Unknown error");
+  }
+}
+
+if(m.contracts_for){
   const available=m.contracts_for.available||[];
 const types=[...new Set(available.map(c=>c.contract_type).filter(Boolean))];
   const upContracts=available.filter(c=>c.sentiment==="up").map(c=>c.contract_type);
