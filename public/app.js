@@ -23,5 +23,5 @@ async function init(){
 $("#login").onclick=()=>location.href="/auth/login";
 $("#logout").onclick=async()=>{await get("/api/logout",{method:"POST"});location.reload()};
 $("#connect").disabled=false;
-$("#connect").onclick=async()=>{try{$("#status").textContent="Connecting to demo feed…";const id=$("#account").value;const o=await get("/api/otp/"+encodeURIComponent(id),{method:"POST"});const ws=new WebSocket(o.data.url);ws.onopen=()=>{$("#status").textContent="Demo WebSocket connected ✓";};ws.onerror=()=>{$("#status").textContent="WebSocket connection error";};}catch(e){$("#status").textContent="Feed error: "+e.message;}};
+$("#connect").onclick=async()=>{try{$("#status").textContent="Connecting to R_50…";const id=$("#account").value;const o=await get("/api/otp/"+encodeURIComponent(id),{method:"POST"});const ws=new WebSocket(o.data.url);ws.onopen=()=>{ws.send(JSON.stringify({ticks:"R_50",subscribe:1}));$("#status").textContent="R_50 feed connected ✓";};ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.tick)$("#status").textContent="R_50 • "+m.tick.quote;};ws.onerror=()=>{$("#status").textContent="WebSocket connection error";};}catch(e){$("#status").textContent="Feed error: "+e.message;}};
 init().catch(e=>$("#status").textContent=e.message);
