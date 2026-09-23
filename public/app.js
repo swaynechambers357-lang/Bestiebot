@@ -23,5 +23,5 @@ async function init(){
 $("#login").onclick=()=>location.href="/auth/login";
 $("#logout").onclick=async()=>{await get("/api/logout",{method:"POST"});location.reload()};
 $("#connect").disabled=false;
-$("#connect").onclick=async()=>{try{$("#status").textContent="Getting secure demo feed…";const id=$("#account").value;const o=await get("/api/otp/"+encodeURIComponent(id),{method:"POST"});console.log("OTP response",o);$("#status").textContent="Demo feed credentials received ✓";}catch(e){$("#status").textContent="Feed error: "+e.message;}};
+$("#connect").onclick=async()=>{try{$("#status").textContent="Connecting to demo feed…";const id=$("#account").value;const o=await get("/api/otp/"+encodeURIComponent(id),{method:"POST"});const ws=new WebSocket(o.data.url);ws.onopen=()=>{$("#status").textContent="Demo WebSocket connected ✓";};ws.onerror=()=>{$("#status").textContent="WebSocket connection error";};}catch(e){$("#status").textContent="Feed error: "+e.message;}};
 init().catch(e=>$("#status").textContent=e.message);
