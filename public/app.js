@@ -22,4 +22,6 @@ async function init(){
 }
 $("#login").onclick=()=>location.href="/auth/login";
 $("#logout").onclick=async()=>{await get("/api/logout",{method:"POST"});location.reload();};
+$("#connect").disabled=false;
+$("#connect").onclick=()=>{$("#status").textContent="Preparing demo feed…";};
 init().catch(e=>$("#status").textContent=e.message);
