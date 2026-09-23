@@ -21,7 +21,7 @@ async function init(){
   }catch(e){$("#status").textContent=e.message;}
 }
 $("#login").onclick=()=>location.href="/auth/login";
-$("#logout").onclick=async()=>{await get("/api/logout",{method:"POST"});location.reload();};
+$("#logout").onclick=async()=>{await get("/api/logout",{method:"POST"});location.reload()};
 $("#connect").disabled=false;
-$("#connect").onclick=()=>{$("#status").textContent="Preparing demo feed…";};
+$("#connect").onclick=async()=>{try{$("#status").textContent="Getting secure demo feed…";const id=$("#account").value;const o=await get("/api/otp/"+encodeURIComponent(id),{method:"POST"});console.log("OTP response",o);$("#status").textContent="Demo feed credentials received ✓";}catch(e){$("#status").textContent="Feed error: "+e.message;}};
 init().catch(e=>$("#status").textContent=e.message);
