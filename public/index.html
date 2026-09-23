@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bestie Bot — Demo</title><link rel="stylesheet" href="/style.css"></head>
+<body><main>
+<h1>Bestie Bot <span>DEMO</span></h1>
+<p class="sub">Volatility 50 signal lab • fixed stake • no loss-chasing</p>
+<section class="card">
+<div id="status">Checking login…</div>
+<button id="login">Connect Deriv Demo</button>
+<button id="logout" class="secondary">Log out</button>
+</section>
+<section class="card">
+<label>Demo account<select id="account"><option>Sign in first</option></select></label>
+<div class="grid"><label>Stake<input id="stake" value="1.00" inputmode="decimal"></label>
+<label>Duration<input id="duration" value="5" inputmode="numeric"></label></div>
+<p class="small">Trading is intentionally locked in this first build. We will verify the account, available R_50 contracts, proposal fields and demo WebSocket before enabling Buy.</p>
+<button id="connect" disabled>Connect Demo Feed</button>
+</section>
+<section class="card">
+<h2>Strategy draft</h2>
+<p>EMA 5 / EMA 13 + RSI filter. Signals are informational until we validate the live feed and contract schema. Indicators do not guarantee profitable trades.</p>
+<div class="metric"><b>Signal</b><strong id="signal">WAIT</strong></div>
+<div class="metric"><b>Session P/L</b><strong>$0.00</strong></div>
+</section>
+<script src="/app.js"></script></main></body></html>
