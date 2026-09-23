@@ -49,6 +49,7 @@ const connectFeed=async()=>{try{clearTimeout(reconnectTimer);$("#status").textCo
 };ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.contracts_for){
   console.log("R_50 contracts:",m.contracts_for);
   $("#status").textContent="R_50 contracts received ✓";
+$("#contractCheck").textContent="RECEIVED ✓";
 };if(m.tick){const price=Number(m.tick.quote);prices.push(price);if(prices.length>200)prices.shift();validateSignal(price);$("#status").textContent="R_50 • "+price+" • Memory "+prices.length;}};ws.onerror=()=>{try{ws.close();}catch(e){}};ws.onclose=()=>{if(manualFeed){$("#status").textContent="Feed disconnected • reconnecting…";clearTimeout(reconnectTimer);reconnectTimer=setTimeout(connectFeed,3000);}};}catch(e){$("#status").textContent="Feed error: "+e.message;if(manualFeed){clearTimeout(reconnectTimer);reconnectTimer=setTimeout(connectFeed,3000);}}};$("#connect").onclick=()=>{if(manualFeed)return;manualFeed=true;connectFeed();};
 $("#capital").onchange=()=>{const v=Number($("#capital").value);if(!Number.isFinite(v)||v<=0){$("#capital").value=startingCapital.toFixed(2);return;}startingCapital=v;currentCapital=v;tests=0;wins=0;losses=0;pendingTest=null;lastSignal="WAIT";updateScoreboard();updateBankroll();};
 setInterval(()=>{const s=signal();if(s)$("#signal").textContent=s;},1000);
