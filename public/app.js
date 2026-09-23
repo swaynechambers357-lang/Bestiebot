@@ -62,7 +62,8 @@ const connectFeed=async()=>{try{clearTimeout(reconnectTimer);$("#status").textCo
 if(m.req_id===501){
   if(m.proposal){
     console.log("Proposal received:",m.proposal);
-    $("#status").textContent="TEST PROPOSAL RECEIVED ✓";
+   $("#status").textContent="PROPOSAL ✓ • ID: "+m.proposal.id+" • Ask: $"+m.proposal.ask_price+" • Payout: $"+m.proposal.payout; 
+ 
   }else if(m.error){
     console.log("Proposal error:",m.error);
     $("#status").textContent="PROPOSAL ERROR: "+(m.error.message||"Unknown error");
