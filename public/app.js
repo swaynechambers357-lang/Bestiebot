@@ -63,7 +63,7 @@ if(m.req_id===501){
   if(m.proposal){
     console.log("Proposal received:",m.proposal);
    $("#status").textContent="PROPOSAL ✓ • ID: "+m.proposal.id+" • Ask: $"+m.proposal.ask_price+" • Payout: $"+m.proposal.payout; 
- 
+ $("#proposalCheck").textContent="Ask: $"+m.proposal.ask_price+" • Payout: $"+m.proposal.payout+" ✓";
   }else if(m.error){
     console.log("Proposal error:",m.error);
     $("#status").textContent="PROPOSAL ERROR: "+(m.error.message||"Unknown error");
