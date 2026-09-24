@@ -62,6 +62,7 @@ const connectFeed=async()=>{try{clearTimeout(reconnectTimer);$("#status").textCo
 if(m.req_id===501){
   if(m.proposal){
     console.log("Proposal received:",m.proposal);
+    window.latestProposalId=m.proposal.id;
    $("#status").textContent="PROPOSAL ✓ • ID: "+m.proposal.id+" • Ask: $"+m.proposal.ask_price+" • Payout: $"+m.proposal.payout; 
  $("#proposalCheck").textContent="Ask: $"+m.proposal.ask_price+" • Payout: $"+m.proposal.payout+" ✓";
   }else if(m.error){
