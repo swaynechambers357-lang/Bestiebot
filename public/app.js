@@ -47,12 +47,13 @@ $("#login").onclick=()=>location.href="/auth/login";
 $("#logout").onclick=async()=>{await get("/api/logout",{method:"POST"});location.reload()};
 $("#connect").disabled=false;
 let ws=null,reconnectTimer=null,manualFeed=false;
-const connectFeed=async()=>
+const connectFeed=async()=>{
  if(!demoOnly()){
   $("#status").textContent="DEMO ACCOUNT REQUIRED • Trading blocked";
   manualFeed=false;
   return;
-} {try{clearTimeout(reconnectTimer);$("#status").textContent="Connecting to R_50…";const id=$("#account").value;const o=await get("/api/otp/"+encodeURIComponent(id),{method:"POST"});ws=new WebSocket(o.data.url);ws.onopen=()=>{
+}
+try{clearTimeout(reconnectTimer);$("#status").textContent="Connecting to R_50…";const id=$("#account").value;const o=await get("/api/otp/"+encodeURIComponent(id),{method:"POST"});ws=new WebSocket(o.data.url);ws.onopen=()=>{
   ws.send(JSON.stringify({ticks:"R_50",subscribe:1}));
   ws.send(JSON.stringify({contracts_for:"R_50"}));
   ws.send(JSON.stringify({
