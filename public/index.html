@@ -1,33 +1,176 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bestie Bot — Demo</title><link rel="stylesheet" href="/style.css"></head>
-<body><main>
-<h1>Bestie Bot <span>DEMO</span></h1>
-<p class="sub">Volatility 50 signal lab • fixed stake • no loss-chasing</p>
-<section class="card">
-<div id="status">Checking login…</div>
-<button id="login">Connect Deriv Demo</button>
-<button id="logout" class="secondary">Log out</button>
-</section>
-<section class="card">
-<label>Demo account<select id="account"><option>Sign in first</option></select></label>
-<div class="grid"><label>Stake<input id="stake" value="1.00" inputmode="decimal"></label>
-<label>Duration<input id="duration" value="5" inputmode="numeric"></label></div>
-<p class="small">Trading is intentionally locked in this first build. We will verify the account, available R_50 contracts, proposal fields and demo WebSocket before enabling Buy.</p>
-<button id="connect" disabled>Connect Demo Feed</button>
-</section>
-<section class="card">
-<h2>Strategy draft</h2>
-<p>EMA 5 / EMA 13 + RSI filter. Signals are informational until we validate the live feed and contract schema. Indicators do not guarantee profitable trades.</p>
-<div class="metric"><b>Signal</b><strong id="signal">WAIT</strong></div>
-  <div class="metric"><b>Demo Proposal</b><strong id="proposalCheck">WAITING</strong></div>
-  <div class="metric"><b>Contract Check</b><strong id="contractCheck">WAITING</strong></div>
-<div class="metric"><b>Starting Capital</b><strong><input id="capital" type="number" value="20.00" min="0.01" step="0.01" inputmode="decimal"></strong></div>
-<div class="metric"><b>Current Capital</b><strong id="currentCapital">$20.00</strong></div>
-<div class="metric"><b>Net P/L</b><strong id="sessionPL">$0.00</strong></div>
-  <div class="metric"><b>Actual Demo P/L</b><strong id="actualPL">$0.00</strong></div>
-<div class="metric"><b>Bankroll Status</b><strong id="bankrollStatus">READY</strong></div>
-<div class="metric"><b>5-Tick Tests</b><strong id="tests">0</strong></div>
-<div class="metric"><b>Wins / Losses</b><strong id="record">0 / 0</strong></div>
-<div class="metric"><b>Signal Accuracy</b><strong id="accuracy">—</strong></div>
-</section><script src="/app.js"></script></main></body></html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bestie Bot — Demo Strategy Lab</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+<main>
+
+  <h1>Bestie Bot <span>DEMO</span></h1>
+  <p class="sub">
+    Volatility 50 strategy lab • trend + pullback + confirmation • no loss-chasing
+  </p>
+
+  <section class="card">
+    <div id="status">Checking login…</div>
+
+    <button id="login">Connect Deriv Demo</button>
+    <button id="logout" class="secondary">Log out</button>
+  </section>
+
+  <section class="card">
+
+    <label>
+      Demo account
+      <select id="account">
+        <option>Sign in first</option>
+      </select>
+    </label>
+
+    <div class="grid">
+
+      <label>
+        Stake
+        <input
+          id="stake"
+          value="1.00"
+          inputmode="decimal">
+      </label>
+
+      <label>
+        Test Duration (ticks)
+        <input
+          id="duration"
+          value="10"
+          min="1"
+          inputmode="numeric">
+      </label>
+
+    </div>
+
+    <p class="small">
+      Demo strategy testing only. Contract purchases remain locked.
+      Bestie Bot will observe R_50, calculate the strategy and run
+      simulated signal tests without buying contracts.
+    </p>
+
+    <button id="connect" disabled>
+      Connect Demo Feed
+    </button>
+
+  </section>
+
+  <section class="card">
+
+    <h2>Strategy B — Trend Pullback</h2>
+
+    <p>
+      EMA 20 / EMA 50 trend filter + pullback detection + RSI(14)
+      momentum confirmation. A setup must pass multiple conditions
+      before Bestie Bot produces a RISE or FALL signal.
+    </p>
+
+    <div class="metric">
+      <b>Trend</b>
+      <strong id="trend">WAITING</strong>
+    </div>
+
+    <div class="metric">
+      <b>EMA 20</b>
+      <strong id="ema20">—</strong>
+    </div>
+
+    <div class="metric">
+      <b>EMA 50</b>
+      <strong id="ema50">—</strong>
+    </div>
+
+    <div class="metric">
+      <b>RSI 14</b>
+      <strong id="rsiValue">—</strong>
+    </div>
+
+    <div class="metric">
+      <b>Pullback</b>
+      <strong id="pullback">WAITING</strong>
+    </div>
+
+    <div class="metric">
+      <b>Confirmation</b>
+      <strong id="confirmation">WAITING</strong>
+    </div>
+
+    <div class="metric">
+      <b>Signal</b>
+      <strong id="signal">WAIT</strong>
+    </div>
+
+    <div class="metric">
+      <b>Demo Proposal</b>
+      <strong id="proposalCheck">WAITING</strong>
+    </div>
+
+    <div class="metric">
+      <b>Contract Check</b>
+      <strong id="contractCheck">WAITING</strong>
+    </div>
+
+    <div class="metric">
+      <b>Starting Capital</b>
+      <strong>
+        <input
+          id="capital"
+          type="number"
+          value="20.00"
+          min="0.01"
+          step="0.01"
+          inputmode="decimal">
+      </strong>
+    </div>
+
+    <div class="metric">
+      <b>Current Capital</b>
+      <strong id="currentCapital">$20.00</strong>
+    </div>
+
+    <div class="metric">
+      <b>Net Paper P/L</b>
+      <strong id="sessionPL">+$0.00</strong>
+    </div>
+
+    <div class="metric">
+      <b>Actual Demo P/L</b>
+      <strong id="actualPL">+$0.00</strong>
+    </div>
+
+    <div class="metric">
+      <b>Bankroll Status</b>
+      <strong id="bankrollStatus">READY</strong>
+    </div>
+
+    <div class="metric">
+      <b>Paper Tests</b>
+      <strong id="tests">0</strong>
+    </div>
+
+    <div class="metric">
+      <b>Wins / Losses</b>
+      <strong id="record">0 / 0</strong>
+    </div>
+
+    <div class="metric">
+      <b>Signal Accuracy</b>
+      <strong id="accuracy">—</strong>
+    </div>
+
+  </section>
+
+  <script src="/app.js"></script>
+
+</main>
+</body>
+</html>
