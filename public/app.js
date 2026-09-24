@@ -21,7 +21,7 @@ const demoOnly=()=>{
   const option=$("#account").selectedOptions[0];
   const name=String(option?.textContent||"");
   const id=String(option?.value||"");
-  return name.includes("Demo") && id.startsWith("VRTC");
+  return name.startsWith("Demo • ") && id.length>0;
 };
 async function init(){
   const s=await get("/api/session");
