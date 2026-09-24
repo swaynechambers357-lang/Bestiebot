@@ -17,7 +17,12 @@ async function get(url,opts){const r=await fetch(url,opts);const j=await r.json(
 const feedUrl=x=>x?.data?.url||null;
 const feedSocket=x=>feedUrl(x);
 const socketUrl=x=>feedUrl(x);
-const demoOnly=()=>String($("#account").selectedOptions[0]?.textContent||"").includes("Demo");
+const demoOnly=()=>{
+  const option=$("#account").selectedOptions[0];
+  const name=String(option?.textContent||"");
+  const id=String(option?.value||"");
+  return name.includes("Demo") && id.startsWith("VRTC");
+};
 async function init(){
   const s=await get("/api/session");
   $("#login").style.display=s.authenticated?"none":"block";
