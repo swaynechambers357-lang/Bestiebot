@@ -6,6 +6,32 @@ let startingCapital=20,currentCapital=20,actualDemoPL=0;
 let cooldown=0,ws=null,reconnectTimer=null,manualFeed=false;
 
 /* ===== INDICATORS ===== */
+/* ===== PAPER TEST MEMORY ===== */
+
+function savePaperState(){
+  localStorage.setItem("bestiePaperState", JSON.stringify({
+    tests,
+    wins,
+    losses,
+    startingCapital,
+    currentCapital
+  }));
+}
+
+function loadPaperState(){
+  try{
+    const saved=JSON.parse(localStorage.getItem("bestiePaperState"));
+    if(!saved)return;
+
+    tests=Number(saved.tests)||0;
+    wins=Number(saved.wins)||0;
+    losses=Number(saved.losses)||0;
+    startingCapital=Number(saved.startingCapital)||20;
+    currentCapital=Number(saved.currentCapital)||startingCapital;
+  }catch(e){
+    console.log("Paper memory could not be loaded",e);
+  }
+}
 
 function ema(v,p){
   if(v.length<p)return null;
@@ -147,6 +173,7 @@ function testSignal(price){
       cooldown=5;
       scoreboard();
       bankroll();
+      savePaperState();
     }
     return;
   }
@@ -402,10 +429,11 @@ $("#capital").onchange=()=>{
 
   scoreboard();
   bankroll();
+  savePaperState();
 };
 
 /* ===== START ===== */
-
+loadPaperState();
 scoreboard();
 bankroll();
 displayStrategy();
