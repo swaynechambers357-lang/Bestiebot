@@ -13,6 +13,7 @@ let pendingDemoDirection=null;
 let demoTrades=0;
 let demoWins=0;
 let demoLosses=0;
+const MAX_DEMO_TRADES=20;
 
 /* ===== INDICATORS ===== */
 /* ===== PAPER TEST MEMORY ===== */
@@ -232,6 +233,11 @@ function demoOnly(){
          String(o.value||"").length>0;
 }
 function requestDemoProposal(direction){
+  if(demoTrades>=MAX_DEMO_TRADES){
+  demoTradeEnabled=false;
+  $("#status").textContent="DEMO TEST COMPLETE • 20/20";
+  return false;
+  }
   if(!demoOnly())return false;
   if(!ws || ws.readyState!==WebSocket.OPEN)return false;
   if(demoTradePending || activeDemoContractId)return false;
@@ -475,6 +481,9 @@ async function connectFeed(){
 
     actualDemoPL+=profit;
     demoTrades++;
+    if(demoTrades>=MAX_DEMO_TRADES){
+  demoTradeEnabled=false;
+    }
 
     if(profit>0){
   demoWins++;
