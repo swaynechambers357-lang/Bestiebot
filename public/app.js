@@ -264,6 +264,29 @@ function requestDemoProposal(direction){
 
   return true;
 }
+function buyDemoProposal(proposalId, askPrice){
+  if(!demoTradeEnabled)return false;
+  if(!demoOnly())return false;
+  if(!ws || ws.readyState!==WebSocket.OPEN)return false;
+  if(!proposalId || demoTradePending===false)return false;
+  if(activeDemoContractId)return false;
+
+  const price=Number(askPrice);
+
+  if(!Number.isFinite(price) || price<=0){
+    demoTradePending=false;
+    pendingDemoDirection=null;
+    return false;
+  }
+
+  ws.send(JSON.stringify({
+    buy:String(proposalId),
+    price:price,
+    req_id:602
+  }));
+
+  return true;
+}
 
 /* ===== LOGIN ===== */
 
@@ -380,6 +403,97 @@ async function connectFeed(){
 
     ws.onmessage=e=>{
       const m=JSON.parse(e.data);
+      if(m.req_id===601){
+  if(m.error){
+    demoTradePending=false;
+    pendingDemoDirection=null;
+
+    $("#status").textContent=
+      "DEMO PROPOSAL ERROR: "+
+      (m.error.message||"Unknown");
+
+    return;
+  }
+
+  if(m.proposal){
+    const proposalId=m.proposal.id;
+    const askPrice=m.proposal.ask_price;
+
+    if(!demoTradeEnabled){
+      demoTradePending=false;
+      pendingDemoDirection=null;
+      return;
+    }
+
+    buyDemoProposal(proposalId,askPrice);
+    return;
+  }
+      }
+      if(m.req_id===602){
+  if(m.error){
+    demoTradePending=false;
+    pendingDemoDirection=null;
+    activeDemoContractId=null;
+
+    $("#status").textContent=
+      "DEMO BUY ERROR: "+
+      (m.error.message||"Unknown");
+
+    return;
+  }
+
+  if(m.buy && m.buy.contract_id){
+    activeDemoContractId=m.buy.contract_id;
+    demoTradePending=false;
+
+    ws.send(JSON.stringify({
+      proposal_open_contract:1,
+      contract_id:activeDemoContractId,
+      subscribe:1,
+      req_id:603
+    }));
+
+    $("#status").textContent=
+      "DEMO CONTRACT OPEN • "+
+      pendingDemoDirection;
+
+    return;
+  }
+      }
+      if(m.req_id===603 && m.proposal_open_contract){
+  const c=m.proposal_open_contract;
+
+  if(Number(c.contract_id)!==Number(activeDemoContractId)){
+    return;
+  }
+
+  if(c.is_sold){
+    const profit=Number(c.profit)||0;
+
+    actualDemoPL+=profit;
+    demoTrades++;
+
+    if(profit>0){
+  demoWins++;
+}else if(profit<0){
+  demoLosses++;
+    }
+
+    activeDemoContractId=null;
+    pendingDemoDirection=null;
+    demoTradePending=false;
+
+    bankroll();
+
+    $("#status").textContent=
+      "DEMO SETTLED • "+
+      (profit>=0?"+$":"-$")+
+      Math.abs(profit).toFixed(2)+
+      " • "+demoWins+"W / "+demoLosses+"L";
+
+    return;
+  }
+      }
 
       if(m.req_id===501){
         if(m.proposal){
