@@ -610,3 +610,51 @@ bankroll();
 displayStrategy();
 
 init();
+/* ===== CONTROLLED DEMO TEST ===== */
+
+$("#startDemoTrades").onclick=()=>{
+  if(!demoOnly()){
+    $("#demoTradeStatus").textContent=
+      "Actual demo trading: DEMO ACCOUNT REQUIRED";
+    return;
+  }
+
+  if(!ws || ws.readyState!==WebSocket.OPEN){
+    $("#demoTradeStatus").textContent=
+      "Actual demo trading: CONNECT FEED FIRST";
+    return;
+  }
+
+  if(demoTradePending || activeDemoContractId){
+    $("#demoTradeStatus").textContent=
+      "Actual demo trading: CONTRACT ALREADY ACTIVE";
+    return;
+  }
+
+  demoTrades=0;
+  demoWins=0;
+  demoLosses=0;
+  actualDemoPL=0;
+
+  demoTradeEnabled=true;
+
+  $("#startDemoTrades").disabled=true;
+  $("#stopDemoTrades").disabled=false;
+
+  $("#demoTradeStatus").textContent=
+    "Actual demo trading: ARMED • 0 / "+MAX_DEMO_TRADES;
+
+  bankroll();
+};
+
+$("#stopDemoTrades").onclick=()=>{
+  demoTradeEnabled=false;
+
+  $("#startDemoTrades").disabled=false;
+  $("#stopDemoTrades").disabled=true;
+
+  $("#demoTradeStatus").textContent=
+    activeDemoContractId
+      ?"Actual demo trading: STOPPING • current contract will settle"
+      :"Actual demo trading: LOCKED";
+};
