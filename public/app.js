@@ -4,6 +4,15 @@ const prices=[];
 let tests=0,wins=0,losses=0,pendingTest=null,lastSignal="WAIT";
 let startingCapital=20,currentCapital=20,actualDemoPL=0;
 let cooldown=0,ws=null,reconnectTimer=null,manualFeed=false;
+/* ===== ACTUAL DEMO TRADING ===== */
+
+let demoTradeEnabled=false;
+let demoTradePending=false;
+let activeDemoContractId=null;
+let pendingDemoDirection=null;
+let demoTrades=0;
+let demoWins=0;
+let demoLosses=0;
 
 /* ===== INDICATORS ===== */
 /* ===== PAPER TEST MEMORY ===== */
