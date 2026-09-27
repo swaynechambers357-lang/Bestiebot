@@ -209,7 +209,12 @@ function testSignal(price){
       left:duration
     };
     if(demoTradeEnabled){
-  requestDemoProposal(s);
+  const sent=requestDemoProposal(s);
+
+  $("#demoTradeStatus").textContent=
+    sent
+      ?"Actual demo trading: PROPOSAL SENT • "+s
+      :"Actual demo trading: SIGNAL SEEN BUT PROPOSAL BLOCKED • "+s;
     }
   }
 
