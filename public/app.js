@@ -228,6 +228,42 @@ function demoOnly(){
   return String(o.textContent||"").startsWith("Demo • ") &&
          String(o.value||"").length>0;
 }
+function requestDemoProposal(direction){
+  if(!demoOnly())return false;
+  if(!ws || ws.readyState!==WebSocket.OPEN)return false;
+  if(demoTradePending || activeDemoContractId)return false;
+
+  const contractType=
+    direction==="RISE" ? "CALL" :
+    direction==="FALL" ? "PUT" : null;
+
+  if(!contractType)return false;
+
+  const stake=Math.max(0,Number($("#stake").value)||0);
+  const duration=Math.max(
+    1,
+    parseInt($("#duration").value,10)||10
+  );
+
+  if(stake<=0)return false;
+
+  demoTradePending=true;
+  pendingDemoDirection=direction;
+
+  ws.send(JSON.stringify({
+    proposal:1,
+    amount:stake,
+    basis:"stake",
+    contract_type:contractType,
+    currency:"USD",
+    duration:duration,
+    duration_unit:"t",
+    underlying_symbol:"R_50",
+    req_id:601
+  }));
+
+  return true;
+}
 
 /* ===== LOGIN ===== */
 
