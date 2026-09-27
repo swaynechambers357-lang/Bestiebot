@@ -207,6 +207,9 @@ function testSignal(price){
       entry:price,
       left:duration
     };
+    if(demoTradeEnabled){
+  requestDemoProposal(s);
+    }
   }
 
   lastSignal=s;
