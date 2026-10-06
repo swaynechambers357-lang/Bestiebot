@@ -2,138 +2,419 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Bestie Bot — Demo Strategy Lab</title>
-  <link rel="stylesheet" href="/style.css">
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  >
+
+  <title>Bestie Bot — Strategy Trader</title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
 </head>
 
 <body>
 <main>
 
-  <h1>Bestie Bot <span>DEMO</span></h1>
+  <h1>
+    Bestie Bot
+    <span id="modeBadge">SAFE</span>
+  </h1>
+
   <p class="sub">
-    Volatility 50 strategy lab • trend + pullback + confirmation • no loss-chasing
+    Volatility 50 • EMA20 / EMA50 + RSI14 •
+    trend + pullback + confirmation • no loss-chasing
   </p>
 
-  <section class="card">
-    <div id="status">Checking login…</div>
 
-    <button id="login">Connect Deriv Demo</button>
-    <button id="logout" class="secondary">Log out</button>
+  <!-- ======================================
+       LOGIN / CONNECTION
+       ====================================== -->
+
+  <section class="card">
+
+    <h2>Deriv Connection</h2>
+
+    <div id="status">
+      Checking login…
+    </div>
+
+    <button id="login">
+      Connect Deriv
+    </button>
+
+    <button
+      id="logout"
+      class="secondary"
+    >
+      Log out
+    </button>
+
   </section>
 
+
+  <!-- ======================================
+       ACCOUNT + MARKET SETTINGS
+       ====================================== -->
+
   <section class="card">
 
+    <h2>Trading Account</h2>
+
     <label>
-      Demo account
+      Account
+
       <select id="account">
-        <option>Sign in first</option>
+        <option value="">
+          Sign in first
+        </option>
       </select>
     </label>
+
+    <div class="metric">
+      <b>Detected Account Mode</b>
+      <strong id="accountMode">
+        NOT CONNECTED
+      </strong>
+    </div>
 
     <div class="grid">
 
       <label>
         Stake
+
         <input
           id="stake"
+          type="number"
           value="1.00"
-          inputmode="decimal">
+          min="0.01"
+          step="0.01"
+          inputmode="decimal"
+        >
       </label>
 
       <label>
-        Test Duration (ticks)
+        Duration (ticks)
+
         <input
           id="duration"
+          type="number"
           value="10"
           min="1"
-          inputmode="numeric">
+          step="1"
+          inputmode="numeric"
+        >
       </label>
 
     </div>
 
+    <button
+      id="connect"
+      disabled
+    >
+      Connect R_50 Feed
+    </button>
+
+  </section>
+
+
+  <!-- ======================================
+       DEMO TRADING
+       ====================================== -->
+
+  <section class="card">
+
+    <h2>Demo Trading</h2>
+
     <p class="small">
-      Demo strategy testing only. Contract purchases remain locked.
-      Bestie Bot will observe R_50, calculate the strategy and run
-      simulated signal tests without buying contracts.
+      Uses a Deriv demo account only.
+      Strategy B may automatically submit demo contracts
+      when a valid RISE or FALL signal is confirmed.
     </p>
 
-    <button id="connect" disabled>
-      Connect Demo Feed
-    </button>
     <div class="demo-trade-controls">
-  <button id="startDemoTrades" type="button">
-    Start 20 Demo Trades
-  </button>
 
-  <button id="stopDemoTrades" type="button" disabled>
-    Stop Demo Trading
-  </button>
+      <button
+        id="startDemoTrades"
+        type="button"
+      >
+        Start 20 Demo Trades
+      </button>
 
-  <p class="small" id="demoTradeStatus">
-    Actual demo trading: LOCKED
-  </p>
+      <button
+        id="stopDemoTrades"
+        type="button"
+        disabled
+      >
+        Stop Demo Trading
+      </button>
+
+      <p
+        class="small"
+        id="demoTradeStatus"
+      >
+        Actual demo trading: LOCKED
+      </p>
+
     </div>
 
   </section>
 
+
+  <!-- ======================================
+       LIVE REAL-MONEY TRADING
+       ====================================== -->
+
   <section class="card">
 
-    <h2>Strategy B — Trend Pullback</h2>
+    <h2>
+      LIVE — REAL MONEY
+    </h2>
 
     <p>
-      EMA 20 / EMA 50 trend filter + pullback detection + RSI(14)
-      momentum confirmation. A setup must pass multiple conditions
-      before Bestie Bot produces a RISE or FALL signal.
+      <strong>
+        WARNING: Contracts started from this section
+        use real funds.
+      </strong>
     </p>
+
+    <p class="small">
+      Live mode is separate from Demo mode.
+      It must be manually armed and will use
+      hard session limits.
+    </p>
+
+
+    <div class="grid">
+
+      <label>
+        Maximum Live Stake
+
+        <input
+          id="liveMaxStake"
+          type="number"
+          value="1.00"
+          min="0.01"
+          step="0.01"
+          inputmode="decimal"
+        >
+      </label>
+
+
+      <label>
+        Maximum Live Trades
+
+        <input
+          id="liveMaxTrades"
+          type="number"
+          value="5"
+          min="1"
+          max="20"
+          step="1"
+          inputmode="numeric"
+        >
+      </label>
+
+
+      <label>
+        Maximum Session Loss
+
+        <input
+          id="liveMaxLoss"
+          type="number"
+          value="5.00"
+          min="0.01"
+          step="0.01"
+          inputmode="decimal"
+        >
+      </label>
+
+    </div>
+
+
+    <label>
+      <input
+        id="liveConfirm"
+        type="checkbox"
+      >
+
+      I understand that LIVE mode uses real money.
+    </label>
+
+
+    <div class="demo-trade-controls">
+
+      <button
+        id="startLiveTrades"
+        type="button"
+        disabled
+      >
+        ARM LIVE TRADING
+      </button>
+
+      <button
+        id="stopLiveTrades"
+        type="button"
+        disabled
+      >
+        STOP LIVE TRADING
+      </button>
+
+    </div>
+
+
+    <p
+      class="small"
+      id="liveTradeStatus"
+    >
+      LIVE trading: LOCKED
+    </p>
+
+
+    <div class="metric">
+      <b>Live Trades</b>
+      <strong id="liveTrades">
+        0
+      </strong>
+    </div>
+
+
+    <div class="metric">
+      <b>Live Wins / Losses</b>
+      <strong id="liveRecord">
+        0 / 0
+      </strong>
+    </div>
+
+
+    <div class="metric">
+      <b>Actual Live P/L</b>
+      <strong id="livePL">
+        +$0.00
+      </strong>
+    </div>
+
+
+    <div class="metric">
+      <b>Live Safety</b>
+      <strong id="liveSafety">
+        LOCKED
+      </strong>
+    </div>
+
+  </section>
+
+
+  <!-- ======================================
+       STRATEGY B
+       ====================================== -->
+
+  <section class="card">
+
+    <h2>
+      Strategy B — Trend Pullback
+    </h2>
+
+    <p>
+      EMA 20 / EMA 50 trend filter +
+      pullback detection + RSI(14)
+      momentum confirmation.
+      A setup must pass multiple conditions
+      before Bestie Bot produces a
+      RISE or FALL signal.
+    </p>
+
 
     <div class="metric">
       <b>Trend</b>
-      <strong id="trend">WAITING</strong>
+      <strong id="trend">
+        WAITING
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>EMA 20</b>
-      <strong id="ema20">—</strong>
+      <strong id="ema20">
+        —
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>EMA 50</b>
-      <strong id="ema50">—</strong>
+      <strong id="ema50">
+        —
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>RSI 14</b>
-      <strong id="rsiValue">—</strong>
+      <strong id="rsiValue">
+        —
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>Pullback</b>
-      <strong id="pullback">WAITING</strong>
+      <strong id="pullback">
+        WAITING
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>Confirmation</b>
-      <strong id="confirmation">WAITING</strong>
+      <strong id="confirmation">
+        WAITING
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>Signal</b>
-      <strong id="signal">WAIT</strong>
+      <strong id="signal">
+        WAIT
+      </strong>
     </div>
 
+
     <div class="metric">
-      <b>Demo Proposal</b>
-      <strong id="proposalCheck">WAITING</strong>
+      <b>Proposal Check</b>
+      <strong id="proposalCheck">
+        WAITING
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>Contract Check</b>
-      <strong id="contractCheck">WAITING</strong>
+      <strong id="contractCheck">
+        WAITING
+      </strong>
     </div>
+
+  </section>
+
+
+  <!-- ======================================
+       PAPER TESTING
+       ====================================== -->
+
+  <section class="card">
+
+    <h2>
+      Paper Testing
+    </h2>
+
 
     <div class="metric">
       <b>Starting Capital</b>
+
       <strong>
         <input
           id="capital"
@@ -141,49 +422,72 @@
           value="20.00"
           min="0.01"
           step="0.01"
-          inputmode="decimal">
+          inputmode="decimal"
+        >
       </strong>
     </div>
 
+
     <div class="metric">
       <b>Current Capital</b>
-      <strong id="currentCapital">$20.00</strong>
+      <strong id="currentCapital">
+        $20.00
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>Net Paper P/L</b>
-      <strong id="sessionPL">+$0.00</strong>
+      <strong id="sessionPL">
+        +$0.00
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>Actual Demo P/L</b>
-      <strong id="actualPL">+$0.00</strong>
+      <strong id="actualPL">
+        +$0.00
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>Bankroll Status</b>
-      <strong id="bankrollStatus">READY</strong>
+      <strong id="bankrollStatus">
+        READY
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>Paper Tests</b>
-      <strong id="tests">0</strong>
+      <strong id="tests">
+        0
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>Wins / Losses</b>
-      <strong id="record">0 / 0</strong>
+      <strong id="record">
+        0 / 0
+      </strong>
     </div>
+
 
     <div class="metric">
       <b>Signal Accuracy</b>
-      <strong id="accuracy">—</strong>
+      <strong id="accuracy">
+        —
+      </strong>
     </div>
 
   </section>
+
 
   <script src="/app.js"></script>
 
 </main>
 </body>
-</html>
+  </html>
