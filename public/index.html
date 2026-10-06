@@ -1,493 +1,119 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta
-    name="viewport"
-    content="width=device-width,initial-scale=1"
-  >
-
-  <title>Bestie Bot — Strategy Trader</title>
-
-  <link
-    rel="stylesheet"
-    href="/style.css"
-  >
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090a0c">
+  <title>VELØRA — Private Trading Intelligence</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
-
 <body>
-<main>
+<main class="shell">
 
-  <h1>
-    Bestie Bot
-    <span id="modeBadge">SAFE</span>
-  </h1>
+  <header class="brandbar">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">
+        <i></i><i></i><i></i><i></i>
+      </div>
+      <div>
+        <h1>VEL<span>Ø</span>RA</h1>
+        <p>PRIVATE TRADING INTELLIGENCE</p>
+      </div>
+    </div>
+    <span id="modeBadge" class="mode-badge">SAFE</span>
+  </header>
 
-  <p class="sub">
-    Volatility 50 • EMA20 / EMA50 + RSI14 •
-    trend + pullback + confirmation • no loss-chasing
-  </p>
-
-
-  <!-- ======================================
-       LOGIN / CONNECTION
-       ====================================== -->
-
-  <section class="card">
-
-    <h2>Deriv Connection</h2>
-
-    <div id="status">
-      Checking login…
+  <section class="hero card">
+    <div class="hero-top">
+      <div>
+        <span class="eyebrow">SYSTEM</span>
+        <h2 id="status">Checking secure connection…</h2>
+      </div>
+      <div class="pulse"><span></span></div>
     </div>
 
-    <button id="login">
-      Connect Deriv
-    </button>
-
-    <button
-      id="logout"
-      class="secondary"
-    >
-      Log out
-    </button>
-
+    <button id="login" class="primary">Connect Deriv</button>
+    <button id="logout" class="ghost">Log out</button>
   </section>
 
-
-  <!-- ======================================
-       ACCOUNT + MARKET SETTINGS
-       ====================================== -->
-
-  <section class="card">
-
-    <h2>Trading Account</h2>
-
-    <label>
-      Account
-
-      <select id="account">
-        <option value="">
-          Sign in first
-        </option>
+  <section class="card control-card">
+    <div class="row-head">
+      <div>
+        <span class="eyebrow">ACCOUNT</span>
+        <strong id="accountMode">NOT CONNECTED</strong>
+      </div>
+      <select id="account" aria-label="Trading account">
+        <option value="">Sign in first</option>
       </select>
-    </label>
-
-    <div class="metric">
-      <b>Detected Account Mode</b>
-      <strong id="accountMode">
-        NOT CONNECTED
-      </strong>
     </div>
 
-    <div class="grid">
-
-      <label>
-        Stake
-
-        <input
-          id="stake"
-          type="number"
-          value="1.00"
-          min="0.01"
-          step="0.01"
-          inputmode="decimal"
-        >
+    <div class="inputs">
+      <label>Stake
+        <span class="money-input"><b>$</b><input id="stake" type="number" value="1.00" min="0.01" step="0.01" inputmode="decimal"></span>
       </label>
-
-      <label>
-        Duration (ticks)
-
-        <input
-          id="duration"
-          type="number"
-          value="10"
-          min="1"
-          step="1"
-          inputmode="numeric"
-        >
+      <label>Duration
+        <span class="tick-input"><input id="duration" type="number" value="10" min="1" step="1" inputmode="numeric"><b>ticks</b></span>
       </label>
-
     </div>
 
-    <button
-      id="connect"
-      disabled
-    >
-      Connect R_50 Feed
-    </button>
+    <button id="connect" class="primary" disabled>Connect Market</button>
 
+    <div class="mode-panels">
+      <div id="demoPanel" class="trade-panel">
+        <div class="panel-title"><span>DEMO</span><small>Practice environment</small></div>
+        <button id="startDemoTrades" class="gold-button">Start VELØRA</button>
+        <button id="stopDemoTrades" class="stop-button" disabled>Stop</button>
+        <p id="demoTradeStatus" class="status-line">Demo: ready when you are</p>
+      </div>
+
+      <div id="livePanel" class="trade-panel live-panel">
+        <div class="panel-title"><span>LIVE</span><small>Real funds</small></div>
+
+        <div class="live-limits">
+          <label>Max stake <input id="liveMaxStake" type="number" value="1.00" min="0.01" step="0.01"></label>
+          <label>Max trades <input id="liveMaxTrades" type="number" value="5" min="1" max="20" step="1"></label>
+          <label>Max loss <input id="liveMaxLoss" type="number" value="5.00" min="0.01" step="0.01"></label>
+        </div>
+
+        <label class="confirm">
+          <input id="liveConfirm" type="checkbox">
+          <span>I understand Live mode uses real funds.</span>
+        </label>
+
+        <button id="startLiveTrades" class="gold-button" disabled>Arm Live</button>
+        <button id="stopLiveTrades" class="stop-button" disabled>Stop</button>
+        <p id="liveTradeStatus" class="status-line">Live: locked</p>
+      </div>
+    </div>
   </section>
 
-
-  <!-- ======================================
-       DEMO TRADING
-       ====================================== -->
-
-  <section class="card">
-
-    <h2>Demo Trading</h2>
-
-    <p class="small">
-      Uses a Deriv demo account only.
-      Strategy B may automatically submit demo contracts
-      when a valid RISE or FALL signal is confirmed.
-    </p>
-
-    <div class="demo-trade-controls">
-
-      <button
-        id="startDemoTrades"
-        type="button"
-      >
-        Start 20 Demo Trades
-      </button>
-
-      <button
-        id="stopDemoTrades"
-        type="button"
-        disabled
-      >
-        Stop Demo Trading
-      </button>
-
-      <p
-        class="small"
-        id="demoTradeStatus"
-      >
-        Actual demo trading: LOCKED
-      </p>
-
-    </div>
-
+  <section class="stats">
+    <div><span>SESSION</span><strong id="sessionPL">+$0.00</strong></div>
+    <div><span>DEMO P/L</span><strong id="actualPL">+$0.00</strong></div>
+    <div><span>RECORD</span><strong id="record">0 / 0</strong></div>
   </section>
 
-
-  <!-- ======================================
-       LIVE REAL-MONEY TRADING
-       ====================================== -->
-
-  <section class="card">
-
-    <h2>
-      LIVE — REAL MONEY
-    </h2>
-
-    <p>
-      <strong>
-        WARNING: Contracts started from this section
-        use real funds.
-      </strong>
-    </p>
-
-    <p class="small">
-      Live mode is separate from Demo mode.
-      It must be manually armed and will use
-      hard session limits.
-    </p>
-
-
-    <div class="grid">
-
-      <label>
-        Maximum Live Stake
-
-        <input
-          id="liveMaxStake"
-          type="number"
-          value="1.00"
-          min="0.01"
-          step="0.01"
-          inputmode="decimal"
-        >
-      </label>
-
-
-      <label>
-        Maximum Live Trades
-
-        <input
-          id="liveMaxTrades"
-          type="number"
-          value="5"
-          min="1"
-          max="20"
-          step="1"
-          inputmode="numeric"
-        >
-      </label>
-
-
-      <label>
-        Maximum Session Loss
-
-        <input
-          id="liveMaxLoss"
-          type="number"
-          value="5.00"
-          min="0.01"
-          step="0.01"
-          inputmode="decimal"
-        >
-      </label>
-
-    </div>
-
-
-    <label>
-      <input
-        id="liveConfirm"
-        type="checkbox"
-      >
-
-      I understand that LIVE mode uses real money.
-    </label>
-
-
-    <div class="demo-trade-controls">
-
-      <button
-        id="startLiveTrades"
-        type="button"
-        disabled
-      >
-        ARM LIVE TRADING
-      </button>
-
-      <button
-        id="stopLiveTrades"
-        type="button"
-        disabled
-      >
-        STOP LIVE TRADING
-      </button>
-
-    </div>
-
-
-    <p
-      class="small"
-      id="liveTradeStatus"
-    >
-      LIVE trading: LOCKED
-    </p>
-
-
-    <div class="metric">
-      <b>Live Trades</b>
-      <strong id="liveTrades">
-        0
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Live Wins / Losses</b>
-      <strong id="liveRecord">
-        0 / 0
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Actual Live P/L</b>
-      <strong id="livePL">
-        +$0.00
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Live Safety</b>
-      <strong id="liveSafety">
-        LOCKED
-      </strong>
-    </div>
-
+  <section class="coach card">
+    <span id="coachEyebrow" class="eyebrow">VELØRA MINDSET</span>
+    <blockquote id="coachQuote">Discipline first. Opportunity second.</blockquote>
+    <p id="coachTip">Tip: Let the setup come to you — never chase the market.</p>
   </section>
 
-
-  <!-- ======================================
-       STRATEGY B
-       ====================================== -->
-
-  <section class="card">
-
-    <h2>
-      Strategy B — Trend Pullback
-    </h2>
-
-    <p>
-      EMA 20 / EMA 50 trend filter +
-      pullback detection + RSI(14)
-      momentum confirmation.
-      A setup must pass multiple conditions
-      before Bestie Bot produces a
-      RISE or FALL signal.
-    </p>
-
-
-    <div class="metric">
-      <b>Trend</b>
-      <strong id="trend">
-        WAITING
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>EMA 20</b>
-      <strong id="ema20">
-        —
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>EMA 50</b>
-      <strong id="ema50">
-        —
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>RSI 14</b>
-      <strong id="rsiValue">
-        —
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Pullback</b>
-      <strong id="pullback">
-        WAITING
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Confirmation</b>
-      <strong id="confirmation">
-        WAITING
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Signal</b>
-      <strong id="signal">
-        WAIT
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Proposal Check</b>
-      <strong id="proposalCheck">
-        WAITING
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Contract Check</b>
-      <strong id="contractCheck">
-        WAITING
-      </strong>
-    </div>
-
+  <!-- Internal engine hooks. Hidden from the normal dashboard.
+       Keeping these IDs preserves the tested engine without exposing strategy details. -->
+  <section class="engine-hooks" aria-hidden="true">
+    <span id="trend"></span><span id="ema20"></span><span id="ema50"></span>
+    <span id="rsiValue"></span><span id="pullback"></span><span id="confirmation"></span>
+    <span id="signal"></span><span id="proposalCheck"></span><span id="contractCheck"></span>
+    <input id="capital" type="number" value="20.00">
+    <span id="currentCapital">$20.00</span><span id="bankrollStatus">READY</span>
+    <span id="tests">0</span><span id="accuracy">—</span>
+    <span id="liveTrades">0</span><span id="liveRecord">0 / 0</span>
+    <span id="livePL">+$0.00</span><span id="liveSafety">LOCKED</span>
   </section>
 
-
-  <!-- ======================================
-       PAPER TESTING
-       ====================================== -->
-
-  <section class="card">
-
-    <h2>
-      Paper Testing
-    </h2>
-
-
-    <div class="metric">
-      <b>Starting Capital</b>
-
-      <strong>
-        <input
-          id="capital"
-          type="number"
-          value="20.00"
-          min="0.01"
-          step="0.01"
-          inputmode="decimal"
-        >
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Current Capital</b>
-      <strong id="currentCapital">
-        $20.00
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Net Paper P/L</b>
-      <strong id="sessionPL">
-        +$0.00
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Actual Demo P/L</b>
-      <strong id="actualPL">
-        +$0.00
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Bankroll Status</b>
-      <strong id="bankrollStatus">
-        READY
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Paper Tests</b>
-      <strong id="tests">
-        0
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Wins / Losses</b>
-      <strong id="record">
-        0 / 0
-      </strong>
-    </div>
-
-
-    <div class="metric">
-      <b>Signal Accuracy</b>
-      <strong id="accuracy">
-        —
-      </strong>
-    </div>
-
-  </section>
-
-
+  <footer>VELØRA • PRIVATE TRADING INTELLIGENCE</footer>
   <script src="/app.js"></script>
-
 </main>
 </body>
-  </html>
+</html>

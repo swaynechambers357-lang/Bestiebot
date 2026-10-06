@@ -82,6 +82,56 @@ function money(value) {
   return Number.isFinite(n) ? "$" + n.toFixed(2) : "$0.00";
 }
 
+/* =========================================================
+   VELØRA TRADE COACH
+   UI-only motivation + discipline tips.
+   This does not alter signals, entries, stake, or execution.
+   ========================================================= */
+
+const winQuotes = [
+  "Progress compounds when discipline stays consistent.",
+  "Good trade. Protect the process that produced it.",
+  "One clean win at a time. Stay selective.",
+  "Momentum is earned — keep the same discipline.",
+  "Green is progress, not permission to overtrade."
+];
+
+const lossQuotes = [
+  "A loss is data. Discipline decides what happens next.",
+  "Reset, review, and wait for the next clean setup.",
+  "Protect the process — never chase a loss.",
+  "One result does not define the system. Stay patient.",
+  "Capital protection comes before getting even."
+];
+
+const winTips = [
+  "Tip: Keep the stake unchanged after a win; avoid confidence-based sizing.",
+  "Tip: Judge the setup quality, not just the last result.",
+  "Tip: Respect the session trade limit even during a winning streak.",
+  "Tip: Record the result and wait for the next confirmed setup."
+];
+
+const lossTips = [
+  "Tip: Never increase stake just to recover the previous loss.",
+  "Tip: Let the next confirmed setup come to you — do not force an entry.",
+  "Tip: If the session loss limit is reached, stop the session.",
+  "Tip: A skipped weak setup is better than an emotional trade."
+];
+
+function pickMessage(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function showTradeMessage(profit) {
+  const n = Number(profit) || 0;
+  const won = n > 0;
+  const lost = n < 0;
+
+  setText("#coachEyebrow", won ? "WIN • KEEP BUILDING" : lost ? "LOSS • RESET" : "FLAT • STAY SELECTIVE");
+  setText("#coachQuote", won ? pickMessage(winQuotes) : lost ? pickMessage(lossQuotes) : "No edge in forcing the next trade.");
+  setText("#coachTip", won ? pickMessage(winTips) : lost ? pickMessage(lossTips) : "Tip: Wait for a fully confirmed setup.");
+}
+
 function savePaperState() {
   try {
     localStorage.setItem("bestiePaperState", JSON.stringify({
@@ -183,7 +233,7 @@ function bankroll() {
 function updateDemoDisplay() {
   setText("#demoTradeStatus", demoTradeEnabled
     ? `Actual demo trading: ARMED • ${demoTrades} / ${MAX_DEMO_TRADES} • ${demoWins}W / ${demoLosses}L`
-    : (activeDemoContractId ? "Actual demo trading: STOPPING • current contract will settle" : "Actual demo trading: LOCKED"));
+    : (activeDemoContractId ? "Actual demo trading: STOPPING • current contract will settle" : "Demo: ready when you are"));
 }
 
 function liveMaxStake() { return Math.max(0, numberValue("#liveMaxStake", 1)); }
@@ -236,7 +286,18 @@ function detectAccountMode(account) {
   if (type.includes("demo") || type.includes("virtual") || id.startsWith("VRTC")) return "DEMO";
   return "REAL";
 }
+
+/* ===== VELØRA CLEAN DASHBOARD MODE PANEL ===== */
+function refreshVeloraPanels(){
+  const mode = selectedMode();
+  const demoPanel = $("#demoPanel");
+  const livePanel = $("#livePanel");
+  if (demoPanel) demoPanel.classList.toggle("active", mode === "DEMO");
+  if (livePanel) livePanel.classList.toggle("active", mode === "REAL");
+}
+
 function refreshAccountUI() {
+  refreshVeloraPanels();
   const mode = selectedMode();
   const confirm = Boolean($("#liveConfirm")?.checked);
   setText("#accountMode", mode || "NOT CONNECTED");
@@ -415,8 +476,8 @@ if (accountSelect) {
     setDisabled("#connect", !accountSelect.value);
     setDisabled("#stopDemoTrades", true);
     setDisabled("#stopLiveTrades", true);
-    setText("#demoTradeStatus", "Actual demo trading: LOCKED");
-    setText("#liveTradeStatus", "LIVE trading: LOCKED");
+    setText("#demoTradeStatus", "Demo: ready when you are");
+    setText("#liveTradeStatus", "Live: locked");
     setText("#status", "Account changed • connect R_50 feed");
     refreshAccountUI(); updateLiveDisplay();
   };
@@ -522,6 +583,7 @@ async function connectFeed() {
           const profit = Number(contract.profit) || 0;
           actualDemoPL += profit; demoTrades++;
           if (profit > 0) demoWins++; else if (profit < 0) demoLosses++;
+          showTradeMessage(profit);
           activeDemoContractId = null; pendingDemoDirection = null; demoTradePending = false;
           if (activeDemoSubscriptionId && ws && ws.readyState === WebSocket.OPEN) {
             try { ws.send(JSON.stringify({forget:activeDemoSubscriptionId})); } catch (e) {}
@@ -651,7 +713,7 @@ if (stopDemoButton) {
     setDisabled("#startDemoTrades", false); setDisabled("#stopDemoTrades", true);
     setText("#demoTradeStatus", activeDemoContractId
       ? "Actual demo trading: STOPPING • current contract will settle"
-      : "Actual demo trading: LOCKED");
+      : "Demo: ready when you are");
   };
 }
 
