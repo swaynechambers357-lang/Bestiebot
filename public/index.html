@@ -10,6 +10,11 @@
 
   <meta name="theme-color" content="#070807">
 
+  <meta
+    name="description"
+    content="VELØRA — Private Trading Intelligence for disciplined market analysis and automated demo trading."
+  >
+
   <title>VELØRA — Private Trading Intelligence</title>
 
   <link rel="stylesheet" href="/style.css">
@@ -19,9 +24,9 @@
 
 <main class="velora-app">
 
-  <!-- =========================
+  <!-- =====================================================
        TOP BAR
-       ========================= -->
+       ===================================================== -->
 
   <header class="topbar">
 
@@ -66,9 +71,9 @@
   </header>
 
 
-  <!-- =========================
+  <!-- =====================================================
        CONNECTION
-       ========================= -->
+       ===================================================== -->
 
   <section class="connection-strip">
 
@@ -87,6 +92,7 @@
       id="logout"
       type="button"
       class="secondary"
+      style="display:none"
     >
       Log out
     </button>
@@ -94,9 +100,9 @@
   </section>
 
 
-  <!-- =========================
+  <!-- =====================================================
        ACCOUNT / MODE
-       ========================= -->
+       ===================================================== -->
 
   <section class="account-panel">
 
@@ -111,7 +117,6 @@
       </strong>
 
     </div>
-
 
     <label class="account-select">
 
@@ -129,7 +134,6 @@
 
     </label>
 
-
     <div class="mode-display">
 
       <span>
@@ -145,9 +149,34 @@
   </section>
 
 
-  <!-- =========================
+  <!-- =====================================================
+       REAL EXECUTION MASTER STATUS
+       ===================================================== -->
+
+  <section class="execution-panel real-master-panel">
+
+    <div class="execution-heading">
+
+      <span>
+        REAL EXECUTION
+      </span>
+
+      <strong id="realExecutionBadge">
+        CHECKING
+      </strong>
+
+    </div>
+
+    <p id="realExecutionMessage">
+      Checking VELØRA server execution status…
+    </p>
+
+  </section>
+
+
+  <!-- =====================================================
        MAIN CONTROL AREA
-       ========================= -->
+       ===================================================== -->
 
   <section class="trade-console">
 
@@ -158,6 +187,7 @@
       </span>
 
       <div class="input-wrap">
+
         <b>$</b>
 
         <input
@@ -167,7 +197,9 @@
           min="0.01"
           step="0.01"
           inputmode="decimal"
+          autocomplete="off"
         >
+
       </div>
 
     </div>
@@ -209,6 +241,7 @@
           min="1"
           step="1"
           inputmode="numeric"
+          autocomplete="off"
         >
 
         <b>
@@ -222,9 +255,9 @@
   </section>
 
 
-  <!-- =========================
+  <!-- =====================================================
        MARKET CONNECTION
-       ========================= -->
+       ===================================================== -->
 
   <button
     id="connect"
@@ -236,9 +269,9 @@
   </button>
 
 
-  <!-- =========================
+  <!-- =====================================================
        DEMO CONTROLS
-       ========================= -->
+       ===================================================== -->
 
   <section
     id="demoControls"
@@ -252,15 +285,21 @@
       </span>
 
       <small id="demoTradeStatus">
-        Actual demo trading: LOCKED
+        Demo: ready when you are
       </small>
 
     </div>
+
+    <p class="mode-description">
+      Demo mode uses virtual funds for strategy testing.
+      No real-money transaction is intended in this mode.
+    </p>
 
     <button
       id="startDemoTrades"
       class="gold-button"
       type="button"
+      disabled
     >
       ▶ START VELØRA
     </button>
@@ -277,13 +316,14 @@
   </section>
 
 
-  <!-- =========================
-       LIVE CONTROLS
-       ========================= -->
+  <!-- =====================================================
+       LIVE / REAL ACCOUNT CONTROLS
+       ===================================================== -->
 
   <section
     id="liveControls"
     class="execution-panel"
+    style="display:none"
   >
 
     <div class="execution-heading">
@@ -299,9 +339,26 @@
     </div>
 
 
+    <div class="risk-warning">
+
+      <strong>
+        REAL-MONEY RISK
+      </strong>
+
+      <p>
+        Live trading can result in financial loss.
+        Trading outcomes are not guaranteed and previous
+        demo or paper performance does not guarantee future
+        results.
+      </p>
+
+    </div>
+
+
     <div class="live-limits">
 
       <label>
+
         Max Stake
 
         <input
@@ -311,12 +368,15 @@
           min="0.01"
           step="0.01"
           inputmode="decimal"
+          autocomplete="off"
         >
+
       </label>
 
 
       <label>
-        Max Trades
+
+        Max Signals
 
         <input
           id="liveMaxTrades"
@@ -326,11 +386,14 @@
           max="20"
           step="1"
           inputmode="numeric"
+          autocomplete="off"
         >
+
       </label>
 
 
       <label>
+
         Max Loss
 
         <input
@@ -340,7 +403,9 @@
           min="0.01"
           step="0.01"
           inputmode="decimal"
+          autocomplete="off"
         >
+
       </label>
 
     </div>
@@ -354,7 +419,38 @@
       >
 
       <span>
-        I understand LIVE mode uses real funds.
+        I understand that LIVE mode involves real-money
+        financial risk.
+      </span>
+
+    </label>
+
+
+    <label class="live-confirm">
+
+      <input
+        id="riskConfirm"
+        type="checkbox"
+      >
+
+      <span>
+        I understand that VELØRA cannot guarantee profits
+        or prevent losses.
+      </span>
+
+    </label>
+
+
+    <label class="live-confirm">
+
+      <input
+        id="termsConfirm"
+        type="checkbox"
+      >
+
+      <span>
+        I have read and accept the Terms, Privacy Notice
+        and Risk Disclosure below.
       </span>
 
     </label>
@@ -366,7 +462,7 @@
       type="button"
       disabled
     >
-      ▶ START VELØRA
+      ▶ START LIVE SIGNAL MODE
     </button>
 
 
@@ -379,12 +475,108 @@
       ■ STOP
     </button>
 
+
+    <!-- ===================================================
+         FUTURE REAL EXECUTION CONFIRMATION
+
+         This UI is intentionally disabled until app.js
+         verifies the server-side REAL_TRADING_ENABLED gate.
+         =================================================== -->
+
+    <section
+      id="realExecutionControls"
+      class="real-execution-controls"
+      hidden
+    >
+
+      <div class="execution-heading">
+
+        <span>
+          REAL ORDER CONFIRMATION
+        </span>
+
+        <small>
+          Explicit confirmation required
+        </small>
+
+      </div>
+
+
+      <div
+        id="realOrderPreview"
+        class="real-order-preview"
+      >
+
+        <p>
+          Direction:
+          <strong id="realOrderDirection">
+            —
+          </strong>
+        </p>
+
+        <p>
+          Stake:
+          <strong id="realOrderStake">
+            —
+          </strong>
+        </p>
+
+        <p>
+          Duration:
+          <strong id="realOrderDuration">
+            —
+          </strong>
+        </p>
+
+        <p>
+          Ask:
+          <strong id="realOrderAsk">
+            —
+          </strong>
+        </p>
+
+        <p>
+          Potential payout:
+          <strong id="realOrderPayout">
+            —
+          </strong>
+        </p>
+
+      </div>
+
+
+      <label class="live-confirm final-confirm">
+
+        <input
+          id="realOrderConfirm"
+          type="checkbox"
+        >
+
+        <span>
+          I explicitly authorize this specific
+          real-money transaction.
+        </span>
+
+      </label>
+
+
+      <button
+        id="executeRealTrade"
+        class="gold-button danger-action"
+        type="button"
+        disabled
+      >
+        CONFIRM REAL-MONEY TRADE
+      </button>
+
+    </section>
+
   </section>
 
 
-  <!-- =========================
+  <!-- =====================================================
        SESSION STATS
-       ========================= -->
+       ===================================================== -->
 
   <section class="stats">
 
@@ -429,9 +621,9 @@
   </section>
 
 
-  <!-- =========================
-       MINDSET / TRADE MESSAGE
-       ========================= -->
+  <!-- =====================================================
+       MINDSET
+       ===================================================== -->
 
   <section class="mindset">
 
@@ -450,11 +642,212 @@
   </section>
 
 
-  <!-- =========================
+  <!-- =====================================================
+       PUBLIC INFORMATION / LEGAL
+       ===================================================== -->
+
+  <section
+    id="legal"
+    class="legal-panel"
+  >
+
+    <div class="legal-heading">
+
+      <span class="eyebrow">
+        IMPORTANT INFORMATION
+      </span>
+
+      <h2>
+        VELØRA Terms & Risk Information
+      </h2>
+
+    </div>
+
+
+    <details>
+
+      <summary>
+        Terms of Use
+      </summary>
+
+      <div class="legal-copy">
+
+        <p>
+          VELØRA is a software interface designed to provide
+          trading-related analysis, strategy automation,
+          demo testing and, where specifically enabled,
+          tools that may assist a user in submitting trading
+          instructions through supported third-party
+          services.
+        </p>
+
+        <p>
+          By using VELØRA, you agree that you are responsible
+          for deciding whether trading is appropriate for
+          you and for reviewing every setting, account,
+          stake, duration and transaction before authorizing
+          the use of real funds.
+        </p>
+
+        <p>
+          You must not use VELØRA where doing so would violate
+          applicable law, regulation, contractual restrictions,
+          age requirements or the rules of a connected
+          third-party service.
+        </p>
+
+        <p>
+          VELØRA does not guarantee uninterrupted operation,
+          particular trading results, profits or the accuracy
+          of every signal.
+        </p>
+
+      </div>
+
+    </details>
+
+
+    <details>
+
+      <summary>
+        Risk Disclosure
+      </summary>
+
+      <div class="legal-copy">
+
+        <p>
+          Trading involves substantial financial risk.
+          You can lose money, including the full amount
+          committed to a transaction.
+        </p>
+
+        <p>
+          Automated systems can experience losses caused
+          by market movement, strategy limitations,
+          connectivity problems, delayed data, software
+          defects, third-party outages or unexpected
+          execution conditions.
+        </p>
+
+        <p>
+          Demo, simulated and paper-trading results are
+          hypothetical and may differ materially from
+          results obtained with real funds.
+        </p>
+
+        <p>
+          Historical win rates, backtests, demo performance
+          and previous profits do not guarantee future
+          performance.
+        </p>
+
+        <p>
+          Never trade money you cannot afford to lose.
+        </p>
+
+      </div>
+
+    </details>
+
+
+    <details>
+
+      <summary>
+        Privacy Notice
+      </summary>
+
+      <div class="legal-copy">
+
+        <p>
+          VELØRA uses authentication information required
+          to connect a user's supported trading account.
+          Authentication credentials and access tokens
+          should not be intentionally exposed in the
+          browser interface.
+        </p>
+
+        <p>
+          Session information may be processed for login,
+          account selection, security and application
+          functionality.
+        </p>
+
+        <p>
+          Connected third-party services may independently
+          process account and trading information under
+          their own privacy policies and terms.
+        </p>
+
+        <p>
+          Users should log out when using a shared or
+          untrusted device.
+        </p>
+
+      </div>
+
+    </details>
+
+
+    <details>
+
+      <summary>
+        Third-Party Services
+      </summary>
+
+      <div class="legal-copy">
+
+        <p>
+          VELØRA may connect to third-party trading
+          infrastructure. Those services are separate
+          from VELØRA and may impose their own eligibility
+          rules, account requirements, trading conditions,
+          fees, restrictions, terms and privacy practices.
+        </p>
+
+        <p>
+          Availability of a third-party connection does
+          not imply that VELØRA controls that service or
+          guarantees its availability.
+        </p>
+
+      </div>
+
+    </details>
+
+
+    <details>
+
+      <summary>
+        No Guarantee of Profit
+      </summary>
+
+      <div class="legal-copy">
+
+        <p>
+          No strategy, indicator, algorithm or automated
+          system can guarantee profitable trading.
+        </p>
+
+        <p>
+          VELØRA signals are generated according to
+          programmed rules and should not be interpreted
+          as a promise that a particular transaction will
+          be profitable.
+        </p>
+
+      </div>
+
+    </details>
+
+  </section>
+
+
+  <!-- =====================================================
        ENGINE VALUES
-       Kept for app.js compatibility.
-       Hidden visually by CSS later.
-       ========================= -->
+
+       Required by app.js.
+       Visually hidden through CSS.
+       ===================================================== -->
 
   <section
     class="engine-data"
@@ -524,11 +917,11 @@
     </span>
 
     <span id="liveRecord">
-      0 / 0
+      PREVIEW
     </span>
 
     <span id="livePL">
-      +$0.00
+      $0.00
     </span>
 
     <span id="liveSafety">
@@ -538,14 +931,45 @@
   </section>
 
 
+  <!-- =====================================================
+       FOOTER
+       ===================================================== -->
+
   <footer>
-    VELØRA · PRIVATE TRADING INTELLIGENCE
+
+    <strong>
+      VELØRA
+    </strong>
+
+    <span>
+      PRIVATE TRADING INTELLIGENCE
+    </span>
+
+    <nav aria-label="Legal">
+
+      <a href="#legal">
+        Terms
+      </a>
+
+      <a href="#legal">
+        Privacy
+      </a>
+
+      <a href="#legal">
+        Risk
+      </a>
+
+    </nav>
+
+    <small>
+      Trading involves risk. No profit is guaranteed.
+    </small>
+
   </footer>
 
 </main>
 
-
 <script src="/app.js"></script>
 
 </body>
-</html>
+      </html>
