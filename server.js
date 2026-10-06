@@ -229,13 +229,24 @@ const server = http.createServer(async (req, res) => {
         );
       }
 
-      session.token = data.access_token;
+      const newSessionId = crypto.randomBytes(24).toString("hex");
 
-      session.expires =
-        Date.now() +
-        ((data.expires_in || 3600) * 1000);
+const authenticatedSession = {
+  token: data.access_token,
+  expires:
+    Date.now() +
+    ((data.expires_in || 3600) * 1000)
+};
 
-      return redirect(res, "/");
+sessions.set(newSessionId, authenticatedSession);
+sessions.delete(sessionId);
+
+res.setHeader(
+  "Set-Cookie",
+  `bb_session=${newSessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=86400`
+);
+
+return redirect(res, "/");
     }
 
     /* =========================
