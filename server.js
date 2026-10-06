@@ -364,13 +364,18 @@ const server = http.createServer(async (req, res) => {
     ) {
       sessions.delete(sessionId);
 
-      return json(
-        res,
-        200,
-        {
-          ok: true
-        }
-      );
+res.setHeader(
+  "Set-Cookie",
+  "bb_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0"
+);
+
+return json(
+  res,
+  200,
+  {
+    ok: true
+  }
+);
     }
 
     /* =========================
