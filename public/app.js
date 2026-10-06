@@ -6,16 +6,18 @@ const $ = s => document.querySelector(s);
    Market: R_50
 
    DEMO
-   - Automatic proposal
-   - Automatic virtual-fund purchase
-   - Contract monitoring
+   • Automatic proposal
+   • Automatic virtual-fund purchase
+   • Contract monitoring
 
    REAL
-   - Real-account connection
-   - Strategy monitoring
-   - Real-account proposal preview
-   - Safety limits
-   - NO automatic real-money purchase
+   • Real-account connection
+   • Strategy monitoring
+   • Proposal preview
+   • Server-side execution master lock
+   • Three risk / legal confirmations
+   • Explicit confirmation for EACH real-money order
+   • No unattended real-money execution
    ========================================================= */
 
 
@@ -45,6 +47,32 @@ let connectedAccountId = null;
 let connectedAccountMode = null;
 
 const accountInfo = new Map();
+
+
+/* =========================================================
+   SERVER / REAL EXECUTION STATE
+   ========================================================= */
+
+let serverConfig = {
+  demoExecution: true,
+  realAccountConnection: true,
+  realProposalPreview: true,
+  realExecutionEnabled: false
+};
+
+let realExecutionEnabled = false;
+let realExecutionGateAllowed = false;
+
+let realOrderAwaitingConfirmation = false;
+let realPurchasePending = false;
+
+let activeRealContractId = null;
+let activeRealSubscriptionId = null;
+
+let realTrades = 0;
+let realWins = 0;
+let realLosses = 0;
+let realSessionPL = 0;
 
 
 /* =========================================================
@@ -94,11 +122,7 @@ const MAX_DEMO_TRADES = 20;
 
 
 /* =========================================================
-   LIVE / REAL ACCOUNT STATE
-
-   IMPORTANT:
-   Real mode generates proposal previews only.
-   It does NOT send a real-money BUY request.
+   LIVE / REAL STATE
    ========================================================= */
 
 let liveArmed = false;
@@ -110,6 +134,8 @@ let latestLiveProposalId = null;
 let latestLiveProposalAsk = null;
 let latestLiveProposalPayout = null;
 let latestLiveDirection = null;
+let latestLiveStake = null;
+let latestLiveDuration = null;
 
 
 /* =========================================================
@@ -123,7 +149,9 @@ const REQ = {
   DEMO_BUY: 602,
   DEMO_MONITOR: 603,
 
-  LIVE_PROPOSAL: 701
+  LIVE_PROPOSAL: 701,
+  REAL_BUY: 702,
+  REAL_MONITOR: 703
 };
 
 
@@ -154,7 +182,9 @@ function numberValue(selector, fallback = 0) {
 
   const n = Number(el.value);
 
-  return Number.isFinite(n) ? n : fallback;
+  return Number.isFinite(n)
+    ? n
+    : fallback;
 }
 
 function integerValue(selector, fallback = 1) {
@@ -164,7 +194,9 @@ function integerValue(selector, fallback = 1) {
 
   const n = parseInt(el.value, 10);
 
-  return Number.isFinite(n) ? n : fallback;
+  return Number.isFinite(n)
+    ? n
+    : fallback;
 }
 
 function money(value) {
@@ -175,9 +207,58 @@ function money(value) {
     : "$0.00";
 }
 
+function signedMoney(value) {
+  const n = Number(value) || 0;
+
+  return (
+    (n >= 0 ? "+$" : "-$") +
+    Math.abs(n).toFixed(2)
+  );
+}
+
 
 /* =========================================================
-   VELØRA MINDSET
+   SERVER HELPER
+   ========================================================= */
+
+async function get(url, opts) {
+  const response =
+    await fetch(url, opts);
+
+  let data;
+
+  try {
+    data =
+      await response.json();
+  } catch {
+    throw new Error(
+      "Invalid server response"
+    );
+  }
+
+  if (!response.ok) {
+    const error =
+      new Error(
+        data.message ||
+        data.error ||
+        "Request failed"
+      );
+
+    error.status =
+      response.status;
+
+    error.data =
+      data;
+
+    throw error;
+  }
+
+  return data;
+}
+
+
+/* =========================================================
+   MINDSET
    ========================================================= */
 
 const winQuotes = [
@@ -211,31 +292,53 @@ const lossTips = [
 ];
 
 function pickMessage(items) {
-  return items[Math.floor(Math.random() * items.length)];
+  return items[
+    Math.floor(
+      Math.random() * items.length
+    )
+  ];
 }
 
 function showTradeMessage(profit) {
-  const n = Number(profit) || 0;
+  const n =
+    Number(profit) || 0;
 
-  const won = n > 0;
-  const lost = n < 0;
+  if (n > 0) {
+    setText(
+      "#tradeQuote",
+      pickMessage(winQuotes)
+    );
+
+    setText(
+      "#tradeTip",
+      pickMessage(winTips)
+    );
+
+    return;
+  }
+
+  if (n < 0) {
+    setText(
+      "#tradeQuote",
+      pickMessage(lossQuotes)
+    );
+
+    setText(
+      "#tradeTip",
+      pickMessage(lossTips)
+    );
+
+    return;
+  }
 
   setText(
     "#tradeQuote",
-    won
-      ? pickMessage(winQuotes)
-      : lost
-        ? pickMessage(lossQuotes)
-        : "No edge in forcing the next trade."
+    "No edge in forcing the next trade."
   );
 
   setText(
     "#tradeTip",
-    won
-      ? pickMessage(winTips)
-      : lost
-        ? pickMessage(lossTips)
-        : "Tip: Wait for a fully confirmed setup."
+    "Tip: Wait for a fully confirmed setup."
   );
 }
 
@@ -257,34 +360,58 @@ function savePaperState() {
       })
     );
   } catch (e) {
-    console.log("Paper memory could not be saved", e);
+    console.log(
+      "Paper memory could not be saved",
+      e
+    );
   }
 }
 
 function loadPaperState() {
   try {
-    const raw = localStorage.getItem("bestiePaperState");
+    const raw =
+      localStorage.getItem(
+        "bestiePaperState"
+      );
 
     if (!raw) return;
 
-    const saved = JSON.parse(raw);
+    const saved =
+      JSON.parse(raw);
 
-    tests = Number(saved.tests) || 0;
-    wins = Number(saved.wins) || 0;
-    losses = Number(saved.losses) || 0;
+    tests =
+      Number(saved.tests) || 0;
+
+    wins =
+      Number(saved.wins) || 0;
+
+    losses =
+      Number(saved.losses) || 0;
 
     startingCapital =
-      Number(saved.startingCapital) || 20;
+      Number(
+        saved.startingCapital
+      ) || 20;
 
     currentCapital =
-      Number(saved.currentCapital);
+      Number(
+        saved.currentCapital
+      );
 
-    if (!Number.isFinite(currentCapital)) {
-      currentCapital = startingCapital;
+    if (
+      !Number.isFinite(
+        currentCapital
+      )
+    ) {
+      currentCapital =
+        startingCapital;
     }
 
   } catch (e) {
-    console.log("Paper memory could not be loaded", e);
+    console.log(
+      "Paper memory could not be loaded",
+      e
+    );
   }
 }
 
@@ -294,15 +421,23 @@ function loadPaperState() {
    ========================================================= */
 
 function ema(values, period) {
-  if (values.length < period) {
+  if (
+    values.length < period
+  ) {
     return null;
   }
 
-  const k = 2 / (period + 1);
+  const k =
+    2 / (period + 1);
 
-  let result = values[0];
+  let result =
+    values[0];
 
-  for (let i = 1; i < values.length; i++) {
+  for (
+    let i = 1;
+    i < values.length;
+    i++
+  ) {
     result =
       values[i] * k +
       result * (1 - k);
@@ -311,9 +446,11 @@ function ema(values, period) {
   return result;
 }
 
-
 function rsi(values, period = 14) {
-  if (values.length < period + 1) {
+  if (
+    values.length <
+    period + 1
+  ) {
     return null;
   }
 
@@ -321,29 +458,37 @@ function rsi(values, period = 14) {
   let lossesValue = 0;
 
   for (
-    let i = values.length - period;
+    let i =
+      values.length - period;
     i < values.length;
     i++
   ) {
     const difference =
-      values[i] - values[i - 1];
+      values[i] -
+      values[i - 1];
 
     if (difference > 0) {
       gains += difference;
     } else {
-      lossesValue -= difference;
+      lossesValue -=
+        difference;
     }
   }
 
   if (lossesValue === 0) {
-    return gains === 0 ? 50 : 100;
+    return gains === 0
+      ? 50
+      : 100;
   }
 
   const rs =
     (gains / period) /
     (lossesValue / period);
 
-  return 100 - (100 / (1 + rs));
+  return (
+    100 -
+    (100 / (1 + rs))
+  );
 }
 
 
@@ -352,9 +497,14 @@ function rsi(values, period = 14) {
    ========================================================= */
 
 function strategy() {
-  const e20 = ema(prices, 20);
-  const e50 = ema(prices, 50);
-  const r = rsi(prices, 14);
+  const e20 =
+    ema(prices, 20);
+
+  const e50 =
+    ema(prices, 50);
+
+  const r =
+    rsi(prices, 14);
 
   if (
     e20 === null ||
@@ -374,10 +524,14 @@ function strategy() {
   }
 
   const price =
-    prices[prices.length - 1];
+    prices[
+      prices.length - 1
+    ];
 
   const prev =
-    prices[prices.length - 2];
+    prices[
+      prices.length - 2
+    ];
 
   let trend = "FLAT";
 
@@ -390,11 +544,14 @@ function strategy() {
   }
 
   const gap =
-    Math.abs(e20 - e50);
+    Math.abs(
+      e20 - e50
+    );
 
   const minZone =
     Math.max(
-      Math.abs(price) * 0.00005,
+      Math.abs(price) *
+        0.00005,
       0.00001
     );
 
@@ -408,44 +565,67 @@ function strategy() {
 
   if (
     trend === "BULLISH" &&
-    Math.abs(price - e20) <= zone
+    Math.abs(
+      price - e20
+    ) <= zone
   ) {
-    pullback = "BULLISH SETUP";
+    pullback =
+      "BULLISH SETUP";
   }
 
   if (
     trend === "BEARISH" &&
-    Math.abs(price - e20) <= zone
+    Math.abs(
+      price - e20
+    ) <= zone
   ) {
-    pullback = "BEARISH SETUP";
+    pullback =
+      "BEARISH SETUP";
   }
 
-  let confirmation = "WAITING";
-  let signal = "WAIT";
+  let confirmation =
+    "WAITING";
 
-  if (pullback === "BULLISH SETUP") {
+  let signal =
+    "WAIT";
+
+  if (
+    pullback ===
+    "BULLISH SETUP"
+  ) {
     if (
       r > 50 &&
       r < 70 &&
       price > prev
     ) {
-      confirmation = "CONFIRMED ↑";
-      signal = "RISE";
+      confirmation =
+        "CONFIRMED ↑";
+
+      signal =
+        "RISE";
     } else {
-      confirmation = "WAITING ↑";
+      confirmation =
+        "WAITING ↑";
     }
   }
 
-  if (pullback === "BEARISH SETUP") {
+  if (
+    pullback ===
+    "BEARISH SETUP"
+  ) {
     if (
       r < 50 &&
       r > 30 &&
       price < prev
     ) {
-      confirmation = "CONFIRMED ↓";
-      signal = "FALL";
+      confirmation =
+        "CONFIRMED ↓";
+
+      signal =
+        "FALL";
     } else {
-      confirmation = "WAITING ↓";
+      confirmation =
+        "WAITING ↓";
     }
   }
 
@@ -466,9 +646,13 @@ function strategy() {
    ========================================================= */
 
 function displayStrategy() {
-  const s = strategy();
+  const s =
+    strategy();
 
-  setText("#trend", s.trend);
+  setText(
+    "#trend",
+    s.trend
+  );
 
   setText(
     "#ema20",
@@ -491,14 +675,37 @@ function displayStrategy() {
       : s.r.toFixed(1)
   );
 
-  setText("#pullback", s.pullback);
-  setText("#confirmation", s.confirmation);
-  setText("#signal", s.signal);
+  setText(
+    "#pullback",
+    s.pullback
+  );
 
-  if (s.signal === "RISE") {
-    setText("#scannerText", "RISE");
-  } else if (s.signal === "FALL") {
-    setText("#scannerText", "FALL");
+  setText(
+    "#confirmation",
+    s.confirmation
+  );
+
+  setText(
+    "#signal",
+    s.signal
+  );
+
+  if (
+    s.signal === "RISE"
+  ) {
+    setText(
+      "#scannerText",
+      "RISE"
+    );
+
+  } else if (
+    s.signal === "FALL"
+  ) {
+    setText(
+      "#scannerText",
+      "FALL"
+    );
+
   } else {
     setText(
       "#scannerText",
@@ -511,11 +718,14 @@ function displayStrategy() {
 
 
 /* =========================================================
-   SCOREBOARD
+   SCOREBOARD / BANKROLL
    ========================================================= */
 
 function scoreboard() {
-  setText("#tests", tests);
+  setText(
+    "#tests",
+    tests
+  );
 
   setText(
     "#record",
@@ -526,22 +736,22 @@ function scoreboard() {
     "#accuracy",
     tests
       ? Math.round(
-          wins / tests * 100
+          wins /
+          tests *
+          100
         ) + "%"
       : "—"
   );
 }
 
-
-/* =========================================================
-   BANKROLL
-   ========================================================= */
-
 function bankroll() {
   const stake =
     Math.max(
       0,
-      numberValue("#stake", 0)
+      numberValue(
+        "#stake",
+        0
+      )
     );
 
   setText(
@@ -550,18 +760,19 @@ function bankroll() {
   );
 
   const paperPL =
-    currentCapital - startingCapital;
+    currentCapital -
+    startingCapital;
 
   setText(
     "#sessionPL",
-    (paperPL >= 0 ? "+$" : "-$") +
-    Math.abs(paperPL).toFixed(2)
+    signedMoney(paperPL)
   );
 
   setText(
     "#actualPL",
-    (actualDemoPL >= 0 ? "+$" : "-$") +
-    Math.abs(actualDemoPL).toFixed(2)
+    signedMoney(
+      actualDemoPL
+    )
   );
 
   setText(
@@ -579,18 +790,31 @@ function bankroll() {
    ========================================================= */
 
 function updateDemoDisplay() {
+  if (
+    demoTradeEnabled
+  ) {
+    setText(
+      "#demoTradeStatus",
+      `Actual demo trading: ARMED • ${demoTrades} / ${MAX_DEMO_TRADES} • ${demoWins}W / ${demoLosses}L`
+    );
+
+    return;
+  }
+
+  if (
+    activeDemoContractId
+  ) {
+    setText(
+      "#demoTradeStatus",
+      "Actual demo trading: STOPPING • current contract will settle"
+    );
+
+    return;
+  }
+
   setText(
     "#demoTradeStatus",
-
-    demoTradeEnabled
-
-      ? `Actual demo trading: ARMED • ${demoTrades} / ${MAX_DEMO_TRADES} • ${demoWins}W / ${demoLosses}L`
-
-      : activeDemoContractId
-
-        ? "Actual demo trading: STOPPING • current contract will settle"
-
-        : "Demo: ready when you are"
+    "Demo: ready when you are"
   );
 }
 
@@ -602,28 +826,39 @@ function updateDemoDisplay() {
 function liveMaxStake() {
   return Math.max(
     0,
-    numberValue("#liveMaxStake", 1)
+    numberValue(
+      "#liveMaxStake",
+      1
+    )
   );
 }
 
 function liveMaxTrades() {
   return Math.max(
     1,
-    integerValue("#liveMaxTrades", 5)
+    integerValue(
+      "#liveMaxTrades",
+      5
+    )
   );
 }
 
 function liveMaxLoss() {
   return Math.max(
     0,
-    numberValue("#liveMaxLoss", 5)
+    numberValue(
+      "#liveMaxLoss",
+      5
+    )
   );
 }
 
-
 function liveLimitsValid() {
   const stake =
-    numberValue("#stake", 0);
+    numberValue(
+      "#stake",
+      0
+    );
 
   const maxStake =
     liveMaxStake();
@@ -640,7 +875,8 @@ function liveLimitsValid() {
   ) {
     return {
       ok: false,
-      reason: "INVALID STAKE"
+      reason:
+        "INVALID STAKE"
     };
   }
 
@@ -650,14 +886,18 @@ function liveLimitsValid() {
   ) {
     return {
       ok: false,
-      reason: "INVALID MAXIMUM STAKE"
+      reason:
+        "INVALID MAXIMUM STAKE"
     };
   }
 
-  if (stake > maxStake) {
+  if (
+    stake > maxStake
+  ) {
     return {
       ok: false,
-      reason: "STAKE EXCEEDS LIVE MAXIMUM"
+      reason:
+        "STAKE EXCEEDS LIVE MAXIMUM"
     };
   }
 
@@ -667,7 +907,8 @@ function liveLimitsValid() {
   ) {
     return {
       ok: false,
-      reason: "INVALID TRADE LIMIT"
+      reason:
+        "INVALID TRADE LIMIT"
     };
   }
 
@@ -677,11 +918,49 @@ function liveLimitsValid() {
   ) {
     return {
       ok: false,
-      reason: "INVALID LOSS LIMIT"
+      reason:
+        "INVALID LOSS LIMIT"
     };
   }
 
-  return { ok: true };
+  if (
+    realSessionPL <=
+    -maxLoss
+  ) {
+    return {
+      ok: false,
+      reason:
+        "SESSION LOSS LIMIT REACHED"
+    };
+  }
+
+  if (
+    realTrades >=
+    maxTrades
+  ) {
+    return {
+      ok: false,
+      reason:
+        "SESSION TRADE LIMIT REACHED"
+    };
+  }
+
+  return {
+    ok: true
+  };
+}
+
+
+/* =========================================================
+   LEGAL CONFIRMATIONS
+   ========================================================= */
+
+function allLiveConfirmationsAccepted() {
+  return Boolean(
+    $("#liveConfirm")?.checked &&
+    $("#riskConfirm")?.checked &&
+    $("#termsConfirm")?.checked
+  );
 }
 
 
@@ -690,7 +969,8 @@ function liveLimitsValid() {
    ========================================================= */
 
 function refreshVeloraPanels() {
-  const mode = selectedMode();
+  const mode =
+    selectedMode();
 
   const demoControls =
     $("#demoControls");
@@ -715,31 +995,222 @@ function refreshVeloraPanels() {
 
 
 /* =========================================================
+   REAL EXECUTION UI
+   ========================================================= */
+
+function clearRealOrderPreview() {
+  realOrderAwaitingConfirmation =
+    false;
+
+  realExecutionGateAllowed =
+    false;
+
+  const controls =
+    $("#realExecutionControls");
+
+  if (controls) {
+    controls.hidden = true;
+  }
+
+  const confirm =
+    $("#realOrderConfirm");
+
+  if (confirm) {
+    confirm.checked = false;
+  }
+
+  setDisabled(
+    "#executeRealTrade",
+    true
+  );
+
+  setText(
+    "#realOrderDirection",
+    "—"
+  );
+
+  setText(
+    "#realOrderStake",
+    "—"
+  );
+
+  setText(
+    "#realOrderDuration",
+    "—"
+  );
+
+  setText(
+    "#realOrderAsk",
+    "—"
+  );
+
+  setText(
+    "#realOrderPayout",
+    "—"
+  );
+}
+
+function showRealOrderPreview() {
+  if (
+    !latestLiveProposalId ||
+    !Number.isFinite(
+      latestLiveProposalAsk
+    )
+  ) {
+    clearRealOrderPreview();
+    return;
+  }
+
+  const controls =
+    $("#realExecutionControls");
+
+  if (controls) {
+    controls.hidden =
+      !realExecutionEnabled;
+  }
+
+  setText(
+    "#realOrderDirection",
+    latestLiveDirection ||
+    "—"
+  );
+
+  setText(
+    "#realOrderStake",
+    Number.isFinite(
+      latestLiveStake
+    )
+      ? money(
+          latestLiveStake
+        )
+      : "—"
+  );
+
+  setText(
+    "#realOrderDuration",
+    Number.isFinite(
+      latestLiveDuration
+    )
+      ? `${latestLiveDuration} ticks`
+      : "—"
+  );
+
+  setText(
+    "#realOrderAsk",
+    Number.isFinite(
+      latestLiveProposalAsk
+    )
+      ? money(
+          latestLiveProposalAsk
+        )
+      : "—"
+  );
+
+  setText(
+    "#realOrderPayout",
+    Number.isFinite(
+      latestLiveProposalPayout
+    )
+      ? money(
+          latestLiveProposalPayout
+        )
+      : "—"
+  );
+
+  realOrderAwaitingConfirmation =
+    realExecutionEnabled;
+
+  setDisabled(
+    "#executeRealTrade",
+    true
+  );
+}
+
+
+/* =========================================================
+   REAL EXECUTION MASTER STATUS
+   ========================================================= */
+
+function updateRealExecutionStatus() {
+  if (
+    realExecutionEnabled
+  ) {
+    setText(
+      "#realExecutionBadge",
+      "AVAILABLE"
+    );
+
+    setText(
+      "#realExecutionMessage",
+      "Server real-money execution gate is enabled. Every real order still requires explicit confirmation."
+    );
+
+    return;
+  }
+
+  setText(
+    "#realExecutionBadge",
+    "LOCKED"
+  );
+
+  setText(
+    "#realExecutionMessage",
+    "Real-money execution is locked by the VELØRA server. Real accounts may be used for market monitoring and proposal previews."
+  );
+
+  clearRealOrderPreview();
+}
+
+async function loadServerConfig() {
+  try {
+    const config =
+      await get(
+        "/api/config"
+      );
+
+    serverConfig = {
+      ...serverConfig,
+      ...config
+    };
+
+    realExecutionEnabled =
+      config.realExecutionEnabled ===
+      true;
+
+  } catch (e) {
+    realExecutionEnabled =
+      false;
+  }
+
+  updateRealExecutionStatus();
+}
+
+
+/* =========================================================
    ACCOUNT UI
    ========================================================= */
 
 function refreshAccountUI() {
-  const mode = selectedMode();
-
-  const confirm =
-    Boolean(
-      $("#liveConfirm")?.checked
-    );
+  const mode =
+    selectedMode();
 
   refreshVeloraPanels();
 
   setText(
     "#accountMode",
-    mode || "NOT CONNECTED"
+    mode ||
+    "NOT CONNECTED"
   );
 
   setText(
     "#modeBadge",
-    mode || "SAFE"
+    mode ||
+    "SAFE"
   );
 
-  if (mode === "DEMO") {
-
+  if (
+    mode === "DEMO"
+  ) {
     setDisabled(
       "#startDemoTrades",
       demoTradeEnabled
@@ -750,30 +1221,35 @@ function refreshAccountUI() {
       true
     );
 
-  } else if (mode === "REAL") {
-
-    setDisabled(
-      "#startDemoTrades",
-      true
-    );
-
-    setDisabled(
-      "#startLiveTrades",
-      !confirm || liveArmed
-    );
-
-  } else {
-
-    setDisabled(
-      "#startDemoTrades",
-      true
-    );
-
-    setDisabled(
-      "#startLiveTrades",
-      true
-    );
+    return;
   }
+
+  if (
+    mode === "REAL"
+  ) {
+    setDisabled(
+      "#startDemoTrades",
+      true
+    );
+
+    setDisabled(
+      "#startLiveTrades",
+      !allLiveConfirmationsAccepted() ||
+      liveArmed
+    );
+
+    return;
+  }
+
+  setDisabled(
+    "#startDemoTrades",
+    true
+  );
+
+  setDisabled(
+    "#startLiveTrades",
+    true
+  );
 }
 
 
@@ -784,41 +1260,70 @@ function refreshAccountUI() {
 function updateLiveDisplay() {
   setText(
     "#liveTrades",
-    liveSignals
+    realTrades
   );
 
   setText(
     "#liveRecord",
-    "PREVIEW"
+    `${realWins}W / ${realLosses}L`
   );
 
   setText(
     "#livePL",
-    "$0.00"
+    signedMoney(
+      realSessionPL
+    )
   );
+
+  let safety =
+    "LOCKED";
+
+  if (
+    activeRealContractId
+  ) {
+    safety =
+      "REAL CONTRACT OPEN";
+
+  } else if (
+    realOrderAwaitingConfirmation
+  ) {
+    safety =
+      "AWAITING CONFIRMATION";
+
+  } else if (
+    liveArmed
+  ) {
+    safety =
+      realExecutionEnabled
+        ? "ARMED • MANUAL CONFIRM"
+        : "ARMED • PREVIEW ONLY";
+  }
 
   setText(
     "#liveSafety",
-    liveArmed
-      ? "ARMED • PREVIEW ONLY"
-      : "LOCKED"
+    safety
   );
 }
 
 
 /* =========================================================
-   STOP LIVE MODE
+   STOP LIVE
    ========================================================= */
 
-function stopLive(reason = "LOCKED") {
+function stopLive(
+  reason = "LOCKED"
+) {
   liveArmed = false;
-
   liveProposalPending = false;
 
   latestLiveProposalId = null;
   latestLiveProposalAsk = null;
   latestLiveProposalPayout = null;
   latestLiveDirection = null;
+  latestLiveStake = null;
+  latestLiveDuration = null;
+
+  clearRealOrderPreview();
 
   setDisabled(
     "#stopLiveTrades",
@@ -829,40 +1334,11 @@ function stopLive(reason = "LOCKED") {
 
   setText(
     "#liveTradeStatus",
-    "LIVE trading: " + reason
+    "LIVE trading: " +
+    reason
   );
 
   updateLiveDisplay();
-}
-
-
-/* =========================================================
-   SERVER HELPER
-   ========================================================= */
-
-async function get(url, opts) {
-  const response =
-    await fetch(url, opts);
-
-  let data;
-
-  try {
-    data =
-      await response.json();
-  } catch (e) {
-    throw new Error(
-      "Invalid server response"
-    );
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      data.error ||
-      "Request failed"
-    );
-  }
-
-  return data;
 }
 
 
@@ -903,13 +1379,17 @@ function detectAccountMode(account) {
    ========================================================= */
 
 function requestDemoProposal(direction) {
-  if (!demoTradeEnabled) {
+  if (
+    !demoTradeEnabled
+  ) {
     return false;
   }
 
-  if (!isDemoAccount()) {
-
-    demoTradeEnabled = false;
+  if (
+    !isDemoAccount()
+  ) {
+    demoTradeEnabled =
+      false;
 
     setText(
       "#demoTradeStatus",
@@ -920,7 +1400,8 @@ function requestDemoProposal(direction) {
   }
 
   if (
-    demoTrades >= MAX_DEMO_TRADES
+    demoTrades >=
+    MAX_DEMO_TRADES
   ) {
     finishDemoSession();
     return false;
@@ -928,7 +1409,8 @@ function requestDemoProposal(direction) {
 
   if (
     !ws ||
-    ws.readyState !== WebSocket.OPEN ||
+    ws.readyState !==
+      WebSocket.OPEN ||
     demoTradePending ||
     activeDemoContractId
   ) {
@@ -949,17 +1431,22 @@ function requestDemoProposal(direction) {
   const stake =
     Math.max(
       0,
-      numberValue("#stake", 0)
+      numberValue(
+        "#stake",
+        0
+      )
     );
 
   const duration =
     Math.max(
       1,
-      integerValue("#duration", 10)
+      integerValue(
+        "#duration",
+        10
+      )
     );
 
   if (stake <= 0) {
-
     setText(
       "#demoTradeStatus",
       "Actual demo trading: INVALID STAKE"
@@ -968,20 +1455,26 @@ function requestDemoProposal(direction) {
     return false;
   }
 
-  demoTradePending = true;
-  pendingDemoDirection = direction;
+  demoTradePending =
+    true;
+
+  pendingDemoDirection =
+    direction;
 
   ws.send(
     JSON.stringify({
       proposal: 1,
       amount: stake,
       basis: "stake",
-      contract_type: contractType,
+      contract_type:
+        contractType,
       currency: "USD",
       duration,
       duration_unit: "t",
-      underlying_symbol: "R_50",
-      req_id: REQ.DEMO_PROPOSAL
+      underlying_symbol:
+        "R_50",
+      req_id:
+        REQ.DEMO_PROPOSAL
     })
   );
 
@@ -1001,18 +1494,25 @@ function buyDemoProposal(
     !demoTradeEnabled ||
     !isDemoAccount()
   ) {
-    demoTradePending = false;
-    pendingDemoDirection = null;
+    demoTradePending =
+      false;
+
+    pendingDemoDirection =
+      null;
 
     return false;
   }
 
   if (
     !ws ||
-    ws.readyState !== WebSocket.OPEN
+    ws.readyState !==
+      WebSocket.OPEN
   ) {
-    demoTradePending = false;
-    pendingDemoDirection = null;
+    demoTradePending =
+      false;
+
+    pendingDemoDirection =
+      null;
 
     return false;
   }
@@ -1032,17 +1532,24 @@ function buyDemoProposal(
     !Number.isFinite(price) ||
     price <= 0
   ) {
-    demoTradePending = false;
-    pendingDemoDirection = null;
+    demoTradePending =
+      false;
+
+    pendingDemoDirection =
+      null;
 
     return false;
   }
 
   ws.send(
     JSON.stringify({
-      buy: String(proposalId),
+      buy:
+        String(
+          proposalId
+        ),
       price,
-      req_id: REQ.DEMO_BUY
+      req_id:
+        REQ.DEMO_BUY
     })
   );
 
@@ -1051,7 +1558,7 @@ function buyDemoProposal(
 
 
 /* =========================================================
-   LIVE PROPOSAL PREVIEW
+   LIVE PROPOSAL
    ========================================================= */
 
 function requestLiveProposal(direction) {
@@ -1059,7 +1566,9 @@ function requestLiveProposal(direction) {
     return false;
   }
 
-  if (!isRealAccount()) {
+  if (
+    !isRealAccount()
+  ) {
     stopLive(
       "REAL ACCOUNT REQUIRED"
     );
@@ -1068,7 +1577,8 @@ function requestLiveProposal(direction) {
   }
 
   if (
-    connectedAccountMode !== "REAL"
+    connectedAccountMode !==
+    "REAL"
   ) {
     stopLive(
       "CONNECTED ACCOUNT IS NOT REAL"
@@ -1079,19 +1589,13 @@ function requestLiveProposal(direction) {
 
   if (
     !ws ||
-    ws.readyState !== WebSocket.OPEN ||
-    liveProposalPending
+    ws.readyState !==
+      WebSocket.OPEN ||
+    liveProposalPending ||
+    realPurchasePending ||
+    activeRealContractId ||
+    realOrderAwaitingConfirmation
   ) {
-    return false;
-  }
-
-  if (
-    liveSignals >= liveMaxTrades()
-  ) {
-    stopLive(
-      "SESSION SIGNAL LIMIT REACHED"
-    );
-
     return false;
   }
 
@@ -1099,7 +1603,21 @@ function requestLiveProposal(direction) {
     liveLimitsValid();
 
   if (!limits.ok) {
-    stopLive(limits.reason);
+    stopLive(
+      limits.reason
+    );
+
+    return false;
+  }
+
+  if (
+    liveSignals >=
+    liveMaxTrades()
+  ) {
+    stopLive(
+      "SESSION SIGNAL LIMIT REACHED"
+    );
+
     return false;
   }
 
@@ -1115,28 +1633,46 @@ function requestLiveProposal(direction) {
   }
 
   const stake =
-    numberValue("#stake", 0);
+    numberValue(
+      "#stake",
+      0
+    );
 
   const duration =
     Math.max(
       1,
-      integerValue("#duration", 10)
+      integerValue(
+        "#duration",
+        10
+      )
     );
 
-  liveProposalPending = true;
-  latestLiveDirection = direction;
+  latestLiveStake =
+    stake;
+
+  latestLiveDuration =
+    duration;
+
+  latestLiveDirection =
+    direction;
+
+  liveProposalPending =
+    true;
 
   ws.send(
     JSON.stringify({
       proposal: 1,
       amount: stake,
       basis: "stake",
-      contract_type: contractType,
+      contract_type:
+        contractType,
       currency: "USD",
       duration,
       duration_unit: "t",
-      underlying_symbol: "R_50",
-      req_id: REQ.LIVE_PROPOSAL
+      underlying_symbol:
+        "R_50",
+      req_id:
+        REQ.LIVE_PROPOSAL
     })
   );
 
@@ -1152,12 +1688,233 @@ function requestLiveProposal(direction) {
 
 
 /* =========================================================
+   REAL SERVER GATE
+   ========================================================= */
+
+async function checkRealExecutionGate() {
+  if (
+    !realExecutionEnabled
+  ) {
+    throw new Error(
+      "Real-money execution is locked by the VELØRA server."
+    );
+  }
+
+  const result =
+    await get(
+      "/api/real-execution/check",
+      {
+        method: "POST"
+      }
+    );
+
+  if (
+    result.allowed !== true
+  ) {
+    throw new Error(
+      result.message ||
+      "Real-money execution is not available."
+    );
+  }
+
+  return true;
+}
+
+
+/* =========================================================
+   EXPLICIT REAL PURCHASE
+   ========================================================= */
+
+async function executeConfirmedRealOrder() {
+  if (
+    realPurchasePending
+  ) {
+    return;
+  }
+
+  if (
+    !realOrderAwaitingConfirmation ||
+    !latestLiveProposalId
+  ) {
+    setText(
+      "#liveTradeStatus",
+      "LIVE: no confirmed proposal is waiting"
+    );
+
+    return;
+  }
+
+  if (
+    !$("#realOrderConfirm")?.checked
+  ) {
+    setText(
+      "#liveTradeStatus",
+      "LIVE: confirm this specific transaction first"
+    );
+
+    return;
+  }
+
+  if (
+    !allLiveConfirmationsAccepted()
+  ) {
+    stopLive(
+      "LOCKED • required confirmations missing"
+    );
+
+    return;
+  }
+
+  if (
+    !isRealAccount() ||
+    connectedAccountMode !==
+      "REAL"
+  ) {
+    stopLive(
+      "REAL ACCOUNT REQUIRED"
+    );
+
+    return;
+  }
+
+  if (
+    !ws ||
+    ws.readyState !==
+      WebSocket.OPEN
+  ) {
+    stopLive(
+      "LOCKED • connection unavailable"
+    );
+
+    return;
+  }
+
+  const limits =
+    liveLimitsValid();
+
+  if (!limits.ok) {
+    stopLive(
+      limits.reason
+    );
+
+    return;
+  }
+
+  /*
+     The proposal must still match the
+     current user-controlled settings.
+  */
+
+  const currentStake =
+    numberValue(
+      "#stake",
+      0
+    );
+
+  const currentDuration =
+    Math.max(
+      1,
+      integerValue(
+        "#duration",
+        10
+      )
+    );
+
+  if (
+    currentStake !==
+      latestLiveStake ||
+    currentDuration !==
+      latestLiveDuration
+  ) {
+    stopLive(
+      "LOCKED • order settings changed"
+    );
+
+    return;
+  }
+
+  try {
+    setDisabled(
+      "#executeRealTrade",
+      true
+    );
+
+    setText(
+      "#liveTradeStatus",
+      "LIVE: verifying server execution gate…"
+    );
+
+    await checkRealExecutionGate();
+
+    realExecutionGateAllowed =
+      true;
+
+    if (
+      !realExecutionGateAllowed
+    ) {
+      throw new Error(
+        "Server execution gate rejected the order."
+      );
+    }
+
+    realPurchasePending =
+      true;
+
+    realOrderAwaitingConfirmation =
+      false;
+
+    ws.send(
+      JSON.stringify({
+        buy:
+          String(
+            latestLiveProposalId
+          ),
+
+        price:
+          Number(
+            latestLiveProposalAsk
+          ),
+
+        req_id:
+          REQ.REAL_BUY
+      })
+    );
+
+    setText(
+      "#liveTradeStatus",
+      "LIVE: confirmed real-money order submitted…"
+    );
+
+    updateLiveDisplay();
+
+  } catch (e) {
+    realPurchasePending =
+      false;
+
+    realExecutionGateAllowed =
+      false;
+
+    setText(
+      "#liveTradeStatus",
+      "LIVE: " +
+      e.message
+    );
+
+    updateLiveDisplay();
+  }
+}
+
+
+/* =========================================================
    DEMO SESSION END
    ========================================================= */
 
 function finishDemoSession() {
-  demoTradeEnabled = false;
-  demoTradePending = false;
+  demoTradeEnabled =
+    false;
+
+  demoTradePending =
+    false;
 
   setDisabled(
     "#startDemoTrades",
@@ -1181,40 +1938,48 @@ function finishDemoSession() {
    ========================================================= */
 
 function testSignal(price) {
-
   if (pendingTest) {
-
     pendingTest.left--;
 
     if (
       pendingTest.left <= 0
     ) {
       const won =
-        pendingTest.direction === "RISE"
-          ? price > pendingTest.entry
-          : price < pendingTest.entry;
+        pendingTest.direction ===
+        "RISE"
+          ? price >
+            pendingTest.entry
+          : price <
+            pendingTest.entry;
 
       const stake =
         Math.max(
           0,
-          numberValue("#stake", 0)
+          numberValue(
+            "#stake",
+            0
+          )
         );
 
       tests++;
 
       if (won) {
         wins++;
-        currentCapital += stake;
+        currentCapital +=
+          stake;
       } else {
         losses++;
         currentCapital =
           Math.max(
             0,
-            currentCapital - stake
+            currentCapital -
+            stake
           );
       }
 
-      pendingTest = null;
+      pendingTest =
+        null;
+
       cooldown = 5;
 
       scoreboard();
@@ -1236,21 +2001,28 @@ function testSignal(price) {
   const stake =
     Math.max(
       0,
-      numberValue("#stake", 0)
+      numberValue(
+        "#stake",
+        0
+      )
     );
 
   const duration =
     Math.max(
       1,
-      integerValue("#duration", 10)
+      integerValue(
+        "#duration",
+        10
+      )
     );
 
   if (
-    (s === "RISE" ||
-     s === "FALL") &&
+    (
+      s === "RISE" ||
+      s === "FALL"
+    ) &&
     s !== lastSignal
   ) {
-
     if (
       stake > 0 &&
       currentCapital >= stake
@@ -1295,9 +2067,12 @@ function testSignal(price) {
 
 async function init() {
   try {
+    await loadServerConfig();
 
     const session =
-      await get("/api/session");
+      await get(
+        "/api/session"
+      );
 
     const login =
       $("#login");
@@ -1319,15 +2094,25 @@ async function init() {
           : "none";
     }
 
-    if (!session.authenticated) {
+    if (
+      session.realExecutionEnabled ===
+      true
+    ) {
+      realExecutionEnabled =
+        true;
 
+      updateRealExecutionStatus();
+    }
+
+    if (
+      !session.authenticated
+    ) {
       setText(
         "#status",
         "Not connected"
       );
 
       refreshAccountUI();
-
       return;
     }
 
@@ -1337,7 +2122,9 @@ async function init() {
     );
 
     const accountsResponse =
-      await get("/api/accounts");
+      await get(
+        "/api/accounts"
+      );
 
     const raw =
       accountsResponse.data ||
@@ -1347,7 +2134,9 @@ async function init() {
     const arr =
       Array.isArray(raw)
         ? raw
-        : Array.isArray(raw.accounts)
+        : Array.isArray(
+            raw.accounts
+          )
           ? raw.accounts
           : [];
 
@@ -1364,7 +2153,6 @@ async function init() {
     accountInfo.clear();
 
     for (const x of arr) {
-
       const id =
         x.account_id ||
         x.id ||
@@ -1400,8 +2188,9 @@ async function init() {
       account.append(option);
     }
 
-    if (!account.options.length) {
-
+    if (
+      !account.options.length
+    ) {
       const option =
         document.createElement(
           "option"
@@ -1428,10 +2217,10 @@ async function init() {
     );
 
   } catch (e) {
-
     setText(
       "#status",
-      "INIT ERROR: " + e.message
+      "INIT ERROR: " +
+      e.message
     );
   }
 }
@@ -1445,32 +2234,27 @@ const loginButton =
   $("#login");
 
 if (loginButton) {
-  loginButton.onclick = () => {
-    location.href =
-      "/auth/login";
-  };
+  loginButton.onclick =
+    () => {
+      location.href =
+        "/auth/login";
+    };
 }
-
 
 const logoutButton =
   $("#logout");
 
 if (logoutButton) {
-
   logoutButton.onclick =
     async () => {
-
       try {
-
         await get(
           "/api/logout",
           {
             method: "POST"
           }
         );
-
       } finally {
-
         location.reload();
       }
     };
@@ -1485,108 +2269,174 @@ const accountSelect =
   $("#account");
 
 if (accountSelect) {
+  accountSelect.onchange =
+    () => {
+      demoTradeEnabled =
+        false;
 
-  accountSelect.onchange = () => {
+      demoTradePending =
+        false;
 
-    demoTradeEnabled = false;
-    demoTradePending = false;
+      liveArmed =
+        false;
 
-    liveArmed = false;
-    liveProposalPending = false;
+      liveProposalPending =
+        false;
 
-    latestLiveProposalId = null;
-    latestLiveProposalAsk = null;
-    latestLiveProposalPayout = null;
-    latestLiveDirection = null;
+      realPurchasePending =
+        false;
 
-    liveSignals = 0;
+      latestLiveProposalId =
+        null;
 
-    manualFeed = false;
+      latestLiveProposalAsk =
+        null;
 
-    clearTimeout(
-      reconnectTimer
-    );
+      latestLiveProposalPayout =
+        null;
 
-    if (ws) {
-      try {
-        ws.close();
-      } catch (e) {}
-    }
+      latestLiveDirection =
+        null;
 
-    ws = null;
+      latestLiveStake =
+        null;
 
-    connectedAccountId = null;
-    connectedAccountMode = null;
+      latestLiveDuration =
+        null;
 
-    prices.length = 0;
+      liveSignals = 0;
 
-    pendingTest = null;
-    lastSignal = "WAIT";
-    cooldown = 0;
+      manualFeed =
+        false;
 
-    setDisabled(
-      "#connect",
-      !accountSelect.value
-    );
+      clearRealOrderPreview();
 
-    setDisabled(
-      "#stopDemoTrades",
-      true
-    );
+      clearTimeout(
+        reconnectTimer
+      );
 
-    setDisabled(
-      "#stopLiveTrades",
-      true
-    );
+      if (ws) {
+        try {
+          ws.close();
+        } catch {}
+      }
 
-    setText(
-      "#demoTradeStatus",
-      "Demo: ready when you are"
-    );
+      ws = null;
 
-    setText(
-      "#liveTradeStatus",
-      "LIVE trading: LOCKED"
-    );
+      connectedAccountId =
+        null;
 
-    setText(
-      "#status",
-      "Account changed • connect R_50 feed"
-    );
+      connectedAccountMode =
+        null;
 
-    setText(
-      "#scannerText",
-      "READY"
-    );
+      prices.length = 0;
 
-    refreshAccountUI();
-    updateLiveDisplay();
-  };
+      pendingTest =
+        null;
+
+      lastSignal =
+        "WAIT";
+
+      cooldown = 0;
+
+      setDisabled(
+        "#connect",
+        !accountSelect.value
+      );
+
+      setDisabled(
+        "#stopDemoTrades",
+        true
+      );
+
+      setDisabled(
+        "#stopLiveTrades",
+        true
+      );
+
+      setText(
+        "#demoTradeStatus",
+        "Demo: ready when you are"
+      );
+
+      setText(
+        "#liveTradeStatus",
+        "LIVE trading: LOCKED"
+      );
+
+      setText(
+        "#status",
+        "Account changed • connect R_50 feed"
+      );
+
+      setText(
+        "#scannerText",
+        "READY"
+      );
+
+      refreshAccountUI();
+      updateLiveDisplay();
+    };
 }
 
 
 /* =========================================================
-   REAL-MONEY CONFIRMATION
+   CONFIRMATION HANDLERS
    ========================================================= */
 
-const liveConfirm =
-  $("#liveConfirm");
+[
+  "#liveConfirm",
+  "#riskConfirm",
+  "#termsConfirm"
+].forEach(selector => {
+  const el =
+    $(selector);
 
-if (liveConfirm) {
+  if (!el) return;
 
-  liveConfirm.onchange = () => {
+  el.addEventListener(
+    "change",
+    () => {
+      if (
+        liveArmed &&
+        !allLiveConfirmationsAccepted()
+      ) {
+        stopLive(
+          "LOCKED • confirmation removed"
+        );
+      }
 
-    if (
-      !liveConfirm.checked &&
-      liveArmed
-    ) {
-      stopLive(
-        "LOCKED • confirmation removed"
-      );
+      refreshAccountUI();
     }
+  );
+});
 
-    refreshAccountUI();
-  };
+const realOrderConfirm =
+  $("#realOrderConfirm");
+
+if (realOrderConfirm) {
+  realOrderConfirm.onchange =
+    () => {
+      setDisabled(
+        "#executeRealTrade",
+        !(
+          realOrderConfirm.checked &&
+          realOrderAwaitingConfirmation &&
+          realExecutionEnabled &&
+          !realPurchasePending
+        )
+      );
+    };
+}
+
+const executeRealTradeButton =
+  $("#executeRealTrade");
+
+if (
+  executeRealTradeButton
+) {
+  executeRealTradeButton.onclick =
+    executeConfirmedRealOrder;
 }
 
 
@@ -1598,32 +2448,33 @@ const connectButton =
   $("#connect");
 
 if (connectButton) {
+  connectButton.onclick =
+    () => {
+      if (manualFeed) {
+        return;
+      }
 
-  connectButton.onclick = () => {
+      if (
+        !$("#account")?.value
+      ) {
+        setText(
+          "#status",
+          "Select an account first"
+        );
 
-    if (manualFeed) {
-      return;
-    }
+        return;
+      }
 
-    if (!$("#account")?.value) {
+      manualFeed =
+        true;
 
-      setText(
-        "#status",
-        "Select an account first"
+      setDisabled(
+        "#connect",
+        true
       );
 
-      return;
-    }
-
-    manualFeed = true;
-
-    setDisabled(
-      "#connect",
-      true
-    );
-
-    connectFeed();
-  };
+      connectFeed();
+    };
 }
 
 
@@ -1632,7 +2483,6 @@ if (connectButton) {
    ========================================================= */
 
 async function connectFeed() {
-
   if (!manualFeed) {
     return;
   }
@@ -1644,8 +2494,8 @@ async function connectFeed() {
     !account ||
     !account.value
   ) {
-
-    manualFeed = false;
+    manualFeed =
+      false;
 
     setText(
       "#status",
@@ -1656,7 +2506,6 @@ async function connectFeed() {
   }
 
   try {
-
     clearTimeout(
       reconnectTimer
     );
@@ -1664,13 +2513,15 @@ async function connectFeed() {
     if (
       ws &&
       (
-        ws.readyState === WebSocket.OPEN ||
-        ws.readyState === WebSocket.CONNECTING
+        ws.readyState ===
+          WebSocket.OPEN ||
+        ws.readyState ===
+          WebSocket.CONNECTING
       )
     ) {
       try {
         ws.close();
-      } catch (e) {}
+      } catch {}
     }
 
     const id =
@@ -1685,8 +2536,11 @@ async function connectFeed() {
       );
     }
 
-    connectedAccountId = id;
-    connectedAccountMode = info.mode;
+    connectedAccountId =
+      id;
+
+    connectedAccountMode =
+      info.mode;
 
     setText(
       "#status",
@@ -1714,194 +2568,96 @@ async function connectFeed() {
       );
     }
 
+    /*
+       Server metadata must agree with
+       the browser's selected account.
+    */
+
+    if (
+      otp.velora?.accountMode &&
+      otp.velora.accountMode !==
+        info.mode
+    ) {
+      throw new Error(
+        "Account mode verification failed"
+      );
+    }
+
+    if (
+      otp.velora &&
+      typeof otp.velora
+        .realExecutionEnabled ===
+        "boolean"
+    ) {
+      realExecutionEnabled =
+        otp.velora
+          .realExecutionEnabled;
+
+      updateRealExecutionStatus();
+    }
+
     ws =
       new WebSocket(
         otp.data.url
       );
 
 
-    /* =========================
+    /* =====================================================
        SOCKET OPEN
-       ========================= */
+       ===================================================== */
 
-    ws.onopen = () => {
-
-      ws.send(
-        JSON.stringify({
-          ticks: "R_50",
-          subscribe: 1
-        })
-      );
-
-      ws.send(
-        JSON.stringify({
-          contracts_for: "R_50"
-        })
-      );
-
-      const duration =
-        Math.max(
-          1,
-          integerValue(
-            "#duration",
-            10
-          )
+    ws.onopen =
+      () => {
+        ws.send(
+          JSON.stringify({
+            ticks: "R_50",
+            subscribe: 1
+          })
         );
-
-      ws.send(
-        JSON.stringify({
-          proposal: 1,
-          amount: 1,
-          basis: "stake",
-          contract_type: "CALL",
-          currency: "USD",
-          duration,
-          duration_unit: "t",
-          underlying_symbol: "R_50",
-          req_id: REQ.SAFE_PROPOSAL
-        })
-      );
-
-      if (
-        activeDemoContractId &&
-        connectedAccountMode === "DEMO"
-      ) {
 
         ws.send(
           JSON.stringify({
-            proposal_open_contract: 1,
-            contract_id:
-              activeDemoContractId,
-            subscribe: 1,
-            req_id:
-              REQ.DEMO_MONITOR
+            contracts_for:
+              "R_50"
           })
         );
-      }
 
-      setText(
-        "#status",
-        "R_50 feed connected ✓ • " +
-        connectedAccountMode
-      );
-    };
-
-
-    /* =========================
-       SOCKET MESSAGE
-       ========================= */
-
-    ws.onmessage = event => {
-
-      let m;
-
-      try {
-        m =
-          JSON.parse(
-            event.data
-          );
-      } catch (e) {
-        return;
-      }
-
-
-      /* -------------------------
-         DEMO PROPOSAL
-         ------------------------- */
-
-      if (
-        m.req_id ===
-        REQ.DEMO_PROPOSAL
-      ) {
-
-        if (m.error) {
-
-          demoTradePending = false;
-          pendingDemoDirection = null;
-
-          setText(
-            "#demoTradeStatus",
-            "Actual demo trading: PROPOSAL ERROR • " +
-            (
-              m.error.message ||
-              "Unknown"
+        const duration =
+          Math.max(
+            1,
+            integerValue(
+              "#duration",
+              10
             )
           );
 
-          return;
-        }
-
-        if (m.proposal) {
-
-          const proposalId =
-            m.proposal.id;
-
-          const askPrice =
-            Number(
-              m.proposal.ask_price
-            );
-
-          if (
-            !demoTradeEnabled ||
-            !isDemoAccount()
-          ) {
-
-            demoTradePending = false;
-            pendingDemoDirection = null;
-
-            return;
-          }
-
-          buyDemoProposal(
-            proposalId,
-            askPrice
-          );
-
-          return;
-        }
-      }
-
-
-      /* -------------------------
-         DEMO BUY
-         ------------------------- */
-
-      if (
-        m.req_id ===
-        REQ.DEMO_BUY
-      ) {
-
-        if (m.error) {
-
-          demoTradePending = false;
-          pendingDemoDirection = null;
-          activeDemoContractId = null;
-
-          setText(
-            "#demoTradeStatus",
-            "Actual demo trading: BUY ERROR • " +
-            (
-              m.error.message ||
-              "Unknown"
-            )
-          );
-
-          return;
-        }
+        ws.send(
+          JSON.stringify({
+            proposal: 1,
+            amount: 1,
+            basis: "stake",
+            contract_type:
+              "CALL",
+            currency: "USD",
+            duration,
+            duration_unit:
+              "t",
+            underlying_symbol:
+              "R_50",
+            req_id:
+              REQ.SAFE_PROPOSAL
+          })
+        );
 
         if (
-          m.buy &&
-          m.buy.contract_id
+          activeDemoContractId &&
+          connectedAccountMode ===
+            "DEMO"
         ) {
-
-          activeDemoContractId =
-            m.buy.contract_id;
-
-          demoTradePending = false;
-
           ws.send(
             JSON.stringify({
-              proposal_open_contract: 1,
+              proposal_open_contract:
+                1,
               contract_id:
                 activeDemoContractId,
               subscribe: 1,
@@ -1909,375 +2665,735 @@ async function connectFeed() {
                 REQ.DEMO_MONITOR
             })
           );
-
-          setText(
-            "#demoTradeStatus",
-            "Actual demo trading: CONTRACT OPEN • " +
-            (
-              pendingDemoDirection ||
-              "UNKNOWN"
-            )
-          );
-
-          return;
-        }
-      }
-
-
-      /* -------------------------
-         DEMO CONTRACT MONITOR
-         ------------------------- */
-
-      if (
-        m.req_id ===
-        REQ.DEMO_MONITOR &&
-        m.proposal_open_contract
-      ) {
-
-        const contract =
-          m.proposal_open_contract;
-
-        if (
-          Number(
-            contract.contract_id
-          ) !==
-          Number(
-            activeDemoContractId
-          )
-        ) {
-          return;
         }
 
         if (
-          m.subscription &&
-          m.subscription.id
+          activeRealContractId &&
+          connectedAccountMode ===
+            "REAL"
         ) {
-          activeDemoSubscriptionId =
-            m.subscription.id;
+          ws.send(
+            JSON.stringify({
+              proposal_open_contract:
+                1,
+              contract_id:
+                activeRealContractId,
+              subscribe: 1,
+              req_id:
+                REQ.REAL_MONITOR
+            })
+          );
         }
 
-        if (contract.is_sold) {
+        setText(
+          "#status",
+          "R_50 feed connected ✓ • " +
+          connectedAccountMode
+        );
+      };
 
-          const profit =
-            Number(
-              contract.profit
-            ) || 0;
 
-          actualDemoPL += profit;
+    /* =====================================================
+       SOCKET MESSAGE
+       ===================================================== */
 
-          demoTrades++;
+    ws.onmessage =
+      event => {
+        let m;
 
-          if (profit > 0) {
-            demoWins++;
-          } else if (profit < 0) {
-            demoLosses++;
-          }
+        try {
+          m =
+            JSON.parse(
+              event.data
+            );
+        } catch {
+          return;
+        }
 
-          showTradeMessage(
-            profit
-          );
 
-          activeDemoContractId = null;
-          pendingDemoDirection = null;
-          demoTradePending = false;
+        /* -------------------------------------------------
+           DEMO PROPOSAL
+           ------------------------------------------------- */
 
-          if (
-            activeDemoSubscriptionId &&
-            ws &&
-            ws.readyState ===
-              WebSocket.OPEN
-          ) {
+        if (
+          m.req_id ===
+          REQ.DEMO_PROPOSAL
+        ) {
+          if (m.error) {
+            demoTradePending =
+              false;
 
-            try {
+            pendingDemoDirection =
+              null;
 
-              ws.send(
-                JSON.stringify({
-                  forget:
-                    activeDemoSubscriptionId
-                })
-              );
-
-            } catch (e) {}
-          }
-
-          activeDemoSubscriptionId =
-            null;
-
-          bankroll();
-
-          if (
-            demoTrades >=
-            MAX_DEMO_TRADES
-          ) {
-
-            finishDemoSession();
+            setText(
+              "#demoTradeStatus",
+              "Actual demo trading: PROPOSAL ERROR • " +
+              (
+                m.error.message ||
+                "Unknown"
+              )
+            );
 
             return;
           }
 
-          setText(
-            "#demoTradeStatus",
-            `Actual demo trading: SETTLED • ${profit >= 0 ? "+$" : "-$"}${Math.abs(profit).toFixed(2)} • ${demoTrades} / ${MAX_DEMO_TRADES} • ${demoWins}W / ${demoLosses}L`
-          );
+          if (m.proposal) {
+            const proposalId =
+              m.proposal.id;
 
-          return;
-        }
-      }
+            const askPrice =
+              Number(
+                m.proposal
+                  .ask_price
+              );
 
+            if (
+              !demoTradeEnabled ||
+              !isDemoAccount()
+            ) {
+              demoTradePending =
+                false;
 
-      /* -------------------------
-         REAL ACCOUNT PROPOSAL
-         PREVIEW ONLY
-         ------------------------- */
+              pendingDemoDirection =
+                null;
 
-      if (
-        m.req_id ===
-        REQ.LIVE_PROPOSAL
-      ) {
+              return;
+            }
 
-        liveProposalPending = false;
-
-        if (m.error) {
-
-          latestLiveProposalId = null;
-          latestLiveProposalAsk = null;
-          latestLiveProposalPayout = null;
-
-          setText(
-            "#liveTradeStatus",
-            "LIVE proposal error • " +
-            (
-              m.error.message ||
-              "Unknown"
-            )
-          );
-
-          return;
-        }
-
-        if (m.proposal) {
-
-          latestLiveProposalId =
-            m.proposal.id || null;
-
-          latestLiveProposalAsk =
-            Number(
-              m.proposal.ask_price
+            buyDemoProposal(
+              proposalId,
+              askPrice
             );
 
-          latestLiveProposalPayout =
-            Number(
-              m.proposal.payout
+            return;
+          }
+        }
+
+
+        /* -------------------------------------------------
+           DEMO BUY
+           ------------------------------------------------- */
+
+        if (
+          m.req_id ===
+          REQ.DEMO_BUY
+        ) {
+          if (m.error) {
+            demoTradePending =
+              false;
+
+            pendingDemoDirection =
+              null;
+
+            activeDemoContractId =
+              null;
+
+            setText(
+              "#demoTradeStatus",
+              "Actual demo trading: BUY ERROR • " +
+              (
+                m.error.message ||
+                "Unknown"
+              )
             );
 
-          liveSignals++;
-
-          const askText =
-            Number.isFinite(
-              latestLiveProposalAsk
-            )
-              ? money(
-                  latestLiveProposalAsk
-                )
-              : "—";
-
-          const payoutText =
-            Number.isFinite(
-              latestLiveProposalPayout
-            )
-              ? money(
-                  latestLiveProposalPayout
-                )
-              : "—";
-
-          setText(
-            "#liveTradeStatus",
-            `LIVE PREVIEW • ${latestLiveDirection} • Ask ${askText} • Payout ${payoutText} • NO PURCHASE SENT`
-          );
-
-          updateLiveDisplay();
+            return;
+          }
 
           if (
-            liveSignals >=
-            liveMaxTrades()
+            m.buy &&
+            m.buy.contract_id
           ) {
-            stopLive(
-              "SESSION SIGNAL LIMIT REACHED"
+            activeDemoContractId =
+              m.buy.contract_id;
+
+            demoTradePending =
+              false;
+
+            ws.send(
+              JSON.stringify({
+                proposal_open_contract:
+                  1,
+                contract_id:
+                  activeDemoContractId,
+                subscribe: 1,
+                req_id:
+                  REQ.DEMO_MONITOR
+              })
+            );
+
+            setText(
+              "#demoTradeStatus",
+              "Actual demo trading: CONTRACT OPEN • " +
+              (
+                pendingDemoDirection ||
+                "UNKNOWN"
+              )
+            );
+
+            return;
+          }
+        }
+
+
+        /* -------------------------------------------------
+           DEMO MONITOR
+           ------------------------------------------------- */
+
+        if (
+          m.req_id ===
+            REQ.DEMO_MONITOR &&
+          m.proposal_open_contract
+        ) {
+          const contract =
+            m.proposal_open_contract;
+
+          if (
+            Number(
+              contract.contract_id
+            ) !==
+            Number(
+              activeDemoContractId
+            )
+          ) {
+            return;
+          }
+
+          if (
+            m.subscription?.id
+          ) {
+            activeDemoSubscriptionId =
+              m.subscription.id;
+          }
+
+          if (
+            contract.is_sold
+          ) {
+            const profit =
+              Number(
+                contract.profit
+              ) || 0;
+
+            actualDemoPL +=
+              profit;
+
+            demoTrades++;
+
+            if (profit > 0) {
+              demoWins++;
+            } else if (
+              profit < 0
+            ) {
+              demoLosses++;
+            }
+
+            showTradeMessage(
+              profit
+            );
+
+            activeDemoContractId =
+              null;
+
+            pendingDemoDirection =
+              null;
+
+            demoTradePending =
+              false;
+
+            if (
+              activeDemoSubscriptionId &&
+              ws?.readyState ===
+                WebSocket.OPEN
+            ) {
+              try {
+                ws.send(
+                  JSON.stringify({
+                    forget:
+                      activeDemoSubscriptionId
+                  })
+                );
+              } catch {}
+            }
+
+            activeDemoSubscriptionId =
+              null;
+
+            bankroll();
+
+            if (
+              demoTrades >=
+              MAX_DEMO_TRADES
+            ) {
+              finishDemoSession();
+              return;
+            }
+
+            setText(
+              "#demoTradeStatus",
+              `Actual demo trading: SETTLED • ${signedMoney(profit)} • ${demoTrades} / ${MAX_DEMO_TRADES} • ${demoWins}W / ${demoLosses}L`
+            );
+
+            return;
+          }
+        }
+
+
+        /* -------------------------------------------------
+           REAL PROPOSAL
+           ------------------------------------------------- */
+
+        if (
+          m.req_id ===
+          REQ.LIVE_PROPOSAL
+        ) {
+          liveProposalPending =
+            false;
+
+          if (m.error) {
+            latestLiveProposalId =
+              null;
+
+            latestLiveProposalAsk =
+              null;
+
+            latestLiveProposalPayout =
+              null;
+
+            clearRealOrderPreview();
+
+            setText(
+              "#liveTradeStatus",
+              "LIVE proposal error • " +
+              (
+                m.error.message ||
+                "Unknown"
+              )
+            );
+
+            return;
+          }
+
+          if (m.proposal) {
+            latestLiveProposalId =
+              m.proposal.id ||
+              null;
+
+            latestLiveProposalAsk =
+              Number(
+                m.proposal
+                  .ask_price
+              );
+
+            latestLiveProposalPayout =
+              Number(
+                m.proposal
+                  .payout
+              );
+
+            liveSignals++;
+
+            const askText =
+              Number.isFinite(
+                latestLiveProposalAsk
+              )
+                ? money(
+                    latestLiveProposalAsk
+                  )
+                : "—";
+
+            const payoutText =
+              Number.isFinite(
+                latestLiveProposalPayout
+              )
+                ? money(
+                    latestLiveProposalPayout
+                  )
+                : "—";
+
+            if (
+              realExecutionEnabled
+            ) {
+              showRealOrderPreview();
+
+              setText(
+                "#liveTradeStatus",
+                `LIVE PROPOSAL • ${latestLiveDirection} • Ask ${askText} • Payout ${payoutText} • awaiting explicit order confirmation`
+              );
+            } else {
+              clearRealOrderPreview();
+
+              setText(
+                "#liveTradeStatus",
+                `LIVE PREVIEW • ${latestLiveDirection} • Ask ${askText} • Payout ${payoutText} • SERVER EXECUTION LOCKED`
+              );
+            }
+
+            updateLiveDisplay();
+
+            return;
+          }
+        }
+
+
+        /* -------------------------------------------------
+           REAL BUY RESPONSE
+           ------------------------------------------------- */
+
+        if (
+          m.req_id ===
+          REQ.REAL_BUY
+        ) {
+          realPurchasePending =
+            false;
+
+          realExecutionGateAllowed =
+            false;
+
+          if (m.error) {
+            setText(
+              "#liveTradeStatus",
+              "LIVE BUY ERROR • " +
+              (
+                m.error.message ||
+                "Unknown"
+              )
+            );
+
+            clearRealOrderPreview();
+            updateLiveDisplay();
+
+            return;
+          }
+
+          if (
+            m.buy &&
+            m.buy.contract_id
+          ) {
+            activeRealContractId =
+              m.buy.contract_id;
+
+            clearRealOrderPreview();
+
+            ws.send(
+              JSON.stringify({
+                proposal_open_contract:
+                  1,
+                contract_id:
+                  activeRealContractId,
+                subscribe: 1,
+                req_id:
+                  REQ.REAL_MONITOR
+              })
+            );
+
+            setText(
+              "#liveTradeStatus",
+              "LIVE REAL-MONEY CONTRACT OPEN • monitoring settlement"
+            );
+
+            updateLiveDisplay();
+
+            return;
+          }
+        }
+
+
+        /* -------------------------------------------------
+           REAL CONTRACT MONITOR
+           ------------------------------------------------- */
+
+        if (
+          m.req_id ===
+            REQ.REAL_MONITOR &&
+          m.proposal_open_contract
+        ) {
+          const contract =
+            m.proposal_open_contract;
+
+          if (
+            Number(
+              contract.contract_id
+            ) !==
+            Number(
+              activeRealContractId
+            )
+          ) {
+            return;
+          }
+
+          if (
+            m.subscription?.id
+          ) {
+            activeRealSubscriptionId =
+              m.subscription.id;
+          }
+
+          if (
+            contract.is_sold
+          ) {
+            const profit =
+              Number(
+                contract.profit
+              ) || 0;
+
+            realTrades++;
+            realSessionPL +=
+              profit;
+
+            if (profit > 0) {
+              realWins++;
+            } else if (
+              profit < 0
+            ) {
+              realLosses++;
+            }
+
+            showTradeMessage(
+              profit
+            );
+
+            activeRealContractId =
+              null;
+
+            if (
+              activeRealSubscriptionId &&
+              ws?.readyState ===
+                WebSocket.OPEN
+            ) {
+              try {
+                ws.send(
+                  JSON.stringify({
+                    forget:
+                      activeRealSubscriptionId
+                  })
+                );
+              } catch {}
+            }
+
+            activeRealSubscriptionId =
+              null;
+
+            latestLiveProposalId =
+              null;
+
+            latestLiveProposalAsk =
+              null;
+
+            latestLiveProposalPayout =
+              null;
+
+            latestLiveDirection =
+              null;
+
+            latestLiveStake =
+              null;
+
+            latestLiveDuration =
+              null;
+
+            updateLiveDisplay();
+
+            const limits =
+              liveLimitsValid();
+
+            if (!limits.ok) {
+              stopLive(
+                limits.reason
+              );
+
+              return;
+            }
+
+            setText(
+              "#liveTradeStatus",
+              `LIVE SETTLED • ${signedMoney(profit)} • ${realTrades} trade${realTrades === 1 ? "" : "s"} this session`
+            );
+
+            return;
+          }
+        }
+
+
+        /* -------------------------------------------------
+           SAFE PROPOSAL
+           ------------------------------------------------- */
+
+        if (
+          m.req_id ===
+          REQ.SAFE_PROPOSAL
+        ) {
+          if (m.proposal) {
+            setText(
+              "#proposalCheck",
+              "Ask: $" +
+              m.proposal.ask_price +
+              " • Payout: $" +
+              m.proposal.payout +
+              " ✓"
             );
           }
 
-          return;
+          if (m.error) {
+            setText(
+              "#proposalCheck",
+              "ERROR"
+            );
+
+            setText(
+              "#status",
+              "PROPOSAL ERROR: " +
+              (
+                m.error.message ||
+                "Unknown"
+              )
+            );
+          }
         }
-      }
 
 
-      /* -------------------------
-         SAFE PROPOSAL CHECK
-         ------------------------- */
+        /* -------------------------------------------------
+           CONTRACT MAPPING
+           ------------------------------------------------- */
 
-      if (
-        m.req_id ===
-        REQ.SAFE_PROPOSAL
-      ) {
+        if (
+          m.contracts_for
+        ) {
+          const available =
+            m.contracts_for
+              .available ||
+            [];
 
-        if (m.proposal) {
+          const call =
+            available.some(
+              x =>
+                x.contract_type ===
+                "CALL"
+            );
+
+          const put =
+            available.some(
+              x =>
+                x.contract_type ===
+                "PUT"
+            );
 
           setText(
-            "#proposalCheck",
-            "Ask: $" +
-            m.proposal.ask_price +
-            " • Payout: $" +
-            m.proposal.payout +
-            " ✓"
+            "#contractCheck",
+            call && put
+              ? "RISE → CALL ✓ • FALL → PUT ✓"
+              : "CHECK CONTRACT MAPPING"
           );
         }
 
-        if (m.error) {
 
-          setText(
-            "#proposalCheck",
-            "ERROR"
-          );
+        /* -------------------------------------------------
+           MARKET TICK
+           ------------------------------------------------- */
+
+        if (m.tick) {
+          const price =
+            Number(
+              m.tick.quote
+            );
+
+          if (
+            !Number.isFinite(
+              price
+            )
+          ) {
+            return;
+          }
+
+          prices.push(price);
+
+          if (
+            prices.length > 500
+          ) {
+            prices.shift();
+          }
+
+          testSignal(price);
+          displayStrategy();
 
           setText(
             "#status",
-            "PROPOSAL ERROR: " +
-            (
-              m.error.message ||
-              "Unknown"
-            )
+            `R_50 • ${price} • Memory ${prices.length} • ${connectedAccountMode || "UNKNOWN"}`
           );
         }
-      }
+      };
 
 
-      /* -------------------------
-         CONTRACT AVAILABILITY
-         ------------------------- */
-
-      if (m.contracts_for) {
-
-        const available =
-          m.contracts_for.available ||
-          [];
-
-        const call =
-          available.some(
-            x =>
-              x.contract_type ===
-              "CALL"
-          );
-
-        const put =
-          available.some(
-            x =>
-              x.contract_type ===
-              "PUT"
-          );
-
-        setText(
-          "#contractCheck",
-          call && put
-            ? "RISE → CALL ✓ • FALL → PUT ✓"
-            : "CHECK CONTRACT MAPPING"
-        );
-      }
-
-
-      /* -------------------------
-         MARKET TICK
-         ------------------------- */
-
-      if (m.tick) {
-
-        const price =
-          Number(
-            m.tick.quote
-          );
-
-        if (
-          !Number.isFinite(price)
-        ) {
-          return;
-        }
-
-        prices.push(price);
-
-        if (
-          prices.length > 500
-        ) {
-          prices.shift();
-        }
-
-        testSignal(price);
-        displayStrategy();
-
-        setText(
-          "#status",
-          `R_50 • ${price} • Memory ${prices.length} • ${connectedAccountMode || "UNKNOWN"}`
-        );
-      }
-    };
-
-
-    /* =========================
+    /* =====================================================
        SOCKET ERROR
-       ========================= */
+       ===================================================== */
 
-    ws.onerror = () => {
+    ws.onerror =
+      () => {
+        try {
+          ws.close();
+        } catch {}
+      };
 
-      try {
-        ws.close();
-      } catch (e) {}
-    };
 
-
-    /* =========================
+    /* =====================================================
        SOCKET CLOSE
-       ========================= */
+       ===================================================== */
 
-    ws.onclose = () => {
+    ws.onclose =
+      () => {
+        demoTradePending =
+          false;
 
-      demoTradePending = false;
-      liveProposalPending = false;
+        liveProposalPending =
+          false;
 
-      latestLiveProposalId = null;
-      latestLiveProposalAsk = null;
-      latestLiveProposalPayout = null;
+        realPurchasePending =
+          false;
 
-      if (
-        !activeDemoContractId
-      ) {
-        pendingDemoDirection = null;
-      }
+        latestLiveProposalId =
+          null;
 
-      if (liveArmed) {
-        stopLive(
-          "LOCKED • connection interrupted"
-        );
-      }
+        latestLiveProposalAsk =
+          null;
 
-      if (manualFeed) {
+        latestLiveProposalPayout =
+          null;
 
-        setText(
-          "#status",
-          "Feed disconnected • reconnecting…"
-        );
+        clearRealOrderPreview();
 
-        clearTimeout(
-          reconnectTimer
-        );
+        if (
+          !activeDemoContractId
+        ) {
+          pendingDemoDirection =
+            null;
+        }
 
-        reconnectTimer =
-          setTimeout(
-            connectFeed,
-            3000
+        if (liveArmed) {
+          stopLive(
+            "LOCKED • connection interrupted"
           );
-      }
-    };
+        }
+
+        if (manualFeed) {
+          setText(
+            "#status",
+            "Feed disconnected • reconnecting…"
+          );
+
+          clearTimeout(
+            reconnectTimer
+          );
+
+          reconnectTimer =
+            setTimeout(
+              connectFeed,
+              3000
+            );
+        }
+      };
 
   } catch (e) {
-
     setText(
       "#status",
       "Feed error: " +
@@ -2291,7 +3407,6 @@ async function connectFeed() {
     }
 
     if (manualFeed) {
-
       clearTimeout(
         reconnectTimer
       );
@@ -2314,40 +3429,48 @@ const capitalInput =
   $("#capital");
 
 if (capitalInput) {
+  capitalInput.onchange =
+    () => {
+      const value =
+        Number(
+          capitalInput.value
+        );
 
-  capitalInput.onchange = () => {
+      if (
+        !Number.isFinite(
+          value
+        ) ||
+        value <= 0
+      ) {
+        capitalInput.value =
+          startingCapital
+            .toFixed(2);
 
-    const value =
-      Number(
-        capitalInput.value
-      );
+        return;
+      }
 
-    if (
-      !Number.isFinite(value) ||
-      value <= 0
-    ) {
+      startingCapital =
+        value;
 
-      capitalInput.value =
-        startingCapital.toFixed(2);
+      currentCapital =
+        value;
 
-      return;
-    }
+      tests = 0;
+      wins = 0;
+      losses = 0;
 
-    startingCapital = value;
-    currentCapital = value;
+      pendingTest =
+        null;
 
-    tests = 0;
-    wins = 0;
-    losses = 0;
+      lastSignal =
+        "WAIT";
 
-    pendingTest = null;
-    lastSignal = "WAIT";
-    cooldown = 0;
+      cooldown = 0;
 
-    scoreboard();
-    bankroll();
-    savePaperState();
-  };
+      scoreboard();
+      bankroll();
+      savePaperState();
+    };
 }
 
 
@@ -2359,109 +3482,116 @@ const startDemoButton =
   $("#startDemoTrades");
 
 if (startDemoButton) {
+  startDemoButton.onclick =
+    () => {
+      if (
+        !isDemoAccount()
+      ) {
+        setText(
+          "#demoTradeStatus",
+          "Actual demo trading: DEMO ACCOUNT REQUIRED"
+        );
 
-  startDemoButton.onclick = () => {
+        return;
+      }
 
-    if (!isDemoAccount()) {
+      if (
+        !ws ||
+        ws.readyState !==
+          WebSocket.OPEN
+      ) {
+        setText(
+          "#demoTradeStatus",
+          "Actual demo trading: CONNECT FEED FIRST"
+        );
+
+        return;
+      }
+
+      if (
+        connectedAccountMode !==
+        "DEMO"
+      ) {
+        setText(
+          "#demoTradeStatus",
+          "Actual demo trading: WRONG CONNECTED ACCOUNT"
+        );
+
+        return;
+      }
+
+      if (
+        demoTradePending ||
+        activeDemoContractId
+      ) {
+        setText(
+          "#demoTradeStatus",
+          "Actual demo trading: CONTRACT ALREADY ACTIVE"
+        );
+
+        return;
+      }
+
+      const stake =
+        Math.max(
+          0,
+          numberValue(
+            "#stake",
+            0
+          )
+        );
+
+      if (stake <= 0) {
+        setText(
+          "#demoTradeStatus",
+          "Actual demo trading: ENTER A VALID STAKE"
+        );
+
+        return;
+      }
+
+      demoTrades = 0;
+      demoWins = 0;
+      demoLosses = 0;
+
+      actualDemoPL = 0;
+
+      demoTradePending =
+        false;
+
+      activeDemoContractId =
+        null;
+
+      activeDemoSubscriptionId =
+        null;
+
+      pendingDemoDirection =
+        null;
+
+      lastSignal =
+        "WAIT";
+
+      demoTradeEnabled =
+        true;
+
+      setDisabled(
+        "#startDemoTrades",
+        true
+      );
+
+      setDisabled(
+        "#stopDemoTrades",
+        false
+      );
 
       setText(
         "#demoTradeStatus",
-        "Actual demo trading: DEMO ACCOUNT REQUIRED"
+        "Actual demo trading: ARMED • 0 / " +
+        MAX_DEMO_TRADES
       );
 
-      return;
-    }
-
-    if (
-      !ws ||
-      ws.readyState !==
-        WebSocket.OPEN
-    ) {
-
-      setText(
-        "#demoTradeStatus",
-        "Actual demo trading: CONNECT FEED FIRST"
-      );
-
-      return;
-    }
-
-    if (
-      connectedAccountMode !== "DEMO"
-    ) {
-
-      setText(
-        "#demoTradeStatus",
-        "Actual demo trading: WRONG CONNECTED ACCOUNT"
-      );
-
-      return;
-    }
-
-    if (
-      demoTradePending ||
-      activeDemoContractId
-    ) {
-
-      setText(
-        "#demoTradeStatus",
-        "Actual demo trading: CONTRACT ALREADY ACTIVE"
-      );
-
-      return;
-    }
-
-    const stake =
-      Math.max(
-        0,
-        numberValue("#stake", 0)
-      );
-
-    if (stake <= 0) {
-
-      setText(
-        "#demoTradeStatus",
-        "Actual demo trading: ENTER A VALID STAKE"
-      );
-
-      return;
-    }
-
-    demoTrades = 0;
-    demoWins = 0;
-    demoLosses = 0;
-
-    actualDemoPL = 0;
-
-    demoTradePending = false;
-
-    activeDemoContractId = null;
-    activeDemoSubscriptionId = null;
-
-    pendingDemoDirection = null;
-
-    lastSignal = "WAIT";
-
-    demoTradeEnabled = true;
-
-    setDisabled(
-      "#startDemoTrades",
-      true
-    );
-
-    setDisabled(
-      "#stopDemoTrades",
-      false
-    );
-
-    setText(
-      "#demoTradeStatus",
-      "Actual demo trading: ARMED • 0 / " +
-      MAX_DEMO_TRADES
-    );
-
-    bankroll();
-  };
+      bankroll();
+    };
 }
 
 
@@ -2473,165 +3603,192 @@ const stopDemoButton =
   $("#stopDemoTrades");
 
 if (stopDemoButton) {
+  stopDemoButton.onclick =
+    () => {
+      demoTradeEnabled =
+        false;
 
-  stopDemoButton.onclick = () => {
+      if (
+        !activeDemoContractId
+      ) {
+        demoTradePending =
+          false;
 
-    demoTradeEnabled = false;
+        pendingDemoDirection =
+          null;
+      }
 
-    if (
-      !activeDemoContractId
-    ) {
+      setDisabled(
+        "#startDemoTrades",
+        false
+      );
 
-      demoTradePending = false;
-      pendingDemoDirection = null;
-    }
+      setDisabled(
+        "#stopDemoTrades",
+        true
+      );
 
-    setDisabled(
-      "#startDemoTrades",
-      false
-    );
-
-    setDisabled(
-      "#stopDemoTrades",
-      true
-    );
-
-    setText(
-      "#demoTradeStatus",
-
-      activeDemoContractId
-
-        ? "Actual demo trading: STOPPING • current contract will settle"
-
-        : "Demo: ready when you are"
-    );
-  };
+      setText(
+        "#demoTradeStatus",
+        activeDemoContractId
+          ? "Actual demo trading: STOPPING • current contract will settle"
+          : "Demo: ready when you are"
+      );
+    };
 }
 
 
 /* =========================================================
-   START REAL ACCOUNT SIGNAL MODE
+   START REAL MODE
    ========================================================= */
 
 const startLiveButton =
   $("#startLiveTrades");
 
 if (startLiveButton) {
+  startLiveButton.onclick =
+    () => {
+      if (
+        !isRealAccount()
+      ) {
+        setText(
+          "#liveTradeStatus",
+          "LIVE trading: REAL ACCOUNT REQUIRED"
+        );
 
-  startLiveButton.onclick = () => {
+        return;
+      }
 
-    if (!isRealAccount()) {
+      if (
+        connectedAccountMode !==
+        "REAL"
+      ) {
+        setText(
+          "#liveTradeStatus",
+          "LIVE trading: CONNECT THE SELECTED REAL ACCOUNT FIRST"
+        );
+
+        return;
+      }
+
+      if (
+        !ws ||
+        ws.readyState !==
+          WebSocket.OPEN
+      ) {
+        setText(
+          "#liveTradeStatus",
+          "LIVE trading: CONNECT FEED FIRST"
+        );
+
+        return;
+      }
+
+      if (
+        !allLiveConfirmationsAccepted()
+      ) {
+        setText(
+          "#liveTradeStatus",
+          "LIVE trading: ACCEPT ALL REQUIRED RISK AND TERMS CONFIRMATIONS"
+        );
+
+        return;
+      }
+
+      const limits =
+        liveLimitsValid();
+
+      if (!limits.ok) {
+        setText(
+          "#liveTradeStatus",
+          "LIVE trading: " +
+          limits.reason
+        );
+
+        return;
+      }
+
+      liveSignals = 0;
+
+      realTrades = 0;
+      realWins = 0;
+      realLosses = 0;
+      realSessionPL = 0;
+
+      liveProposalPending =
+        false;
+
+      realPurchasePending =
+        false;
+
+      latestLiveProposalId =
+        null;
+
+      latestLiveProposalAsk =
+        null;
+
+      latestLiveProposalPayout =
+        null;
+
+      latestLiveDirection =
+        null;
+
+      latestLiveStake =
+        null;
+
+      latestLiveDuration =
+        null;
+
+      clearRealOrderPreview();
+
+      lastSignal =
+        "WAIT";
+
+      liveArmed =
+        true;
+
+      setDisabled(
+        "#startLiveTrades",
+        true
+      );
+
+      setDisabled(
+        "#stopLiveTrades",
+        false
+      );
 
       setText(
         "#liveTradeStatus",
-        "LIVE trading: REAL ACCOUNT REQUIRED"
+        realExecutionEnabled
+          ? "LIVE mode ARMED • REAL ACCOUNT • each order requires manual confirmation"
+          : "LIVE signal mode ARMED • REAL ACCOUNT • PREVIEW ONLY • server execution locked"
       );
 
-      return;
-    }
-
-    if (
-      connectedAccountMode !== "REAL"
-    ) {
-
-      setText(
-        "#liveTradeStatus",
-        "LIVE trading: CONNECT THE SELECTED REAL ACCOUNT FIRST"
-      );
-
-      return;
-    }
-
-    if (
-      !ws ||
-      ws.readyState !==
-        WebSocket.OPEN
-    ) {
-
-      setText(
-        "#liveTradeStatus",
-        "LIVE trading: CONNECT FEED FIRST"
-      );
-
-      return;
-    }
-
-    if (
-      !$("#liveConfirm")?.checked
-    ) {
-
-      setText(
-        "#liveTradeStatus",
-        "LIVE trading: CONFIRM REAL-MONEY WARNING FIRST"
-      );
-
-      return;
-    }
-
-    const limits =
-      liveLimitsValid();
-
-    if (!limits.ok) {
-
-      setText(
-        "#liveTradeStatus",
-        "LIVE trading: " +
-        limits.reason
-      );
-
-      return;
-    }
-
-    liveSignals = 0;
-
-    liveProposalPending = false;
-
-    latestLiveProposalId = null;
-    latestLiveProposalAsk = null;
-    latestLiveProposalPayout = null;
-    latestLiveDirection = null;
-
-    lastSignal = "WAIT";
-
-    liveArmed = true;
-
-    setDisabled(
-      "#startLiveTrades",
-      true
-    );
-
-    setDisabled(
-      "#stopLiveTrades",
-      false
-    );
-
-    setText(
-      "#liveTradeStatus",
-      "LIVE signal mode ARMED • REAL ACCOUNT • PREVIEW ONLY"
-    );
-
-    updateLiveDisplay();
-  };
+      updateLiveDisplay();
+    };
 }
 
 
 /* =========================================================
-   STOP REAL ACCOUNT MODE
+   STOP REAL MODE
    ========================================================= */
 
 const stopLiveButton =
   $("#stopLiveTrades");
 
 if (stopLiveButton) {
-
   stopLiveButton.onclick =
     () =>
-      stopLive("LOCKED");
+      stopLive(
+        activeRealContractId
+          ? "STOPPED • open contract will continue to settlement"
+          : "LOCKED"
+      );
 }
 
 
 /* =========================================================
-   SETTINGS CHANGE = LIVE LOCK
+   SETTINGS CHANGE = REAL LOCK
    ========================================================= */
 
 [
@@ -2641,7 +3798,6 @@ if (stopLiveButton) {
   "#stake",
   "#duration"
 ].forEach(selector => {
-
   const el =
     $(selector);
 
@@ -2650,9 +3806,12 @@ if (stopLiveButton) {
   el.addEventListener(
     "change",
     () => {
+      bankroll();
 
-      if (liveArmed) {
-
+      if (
+        liveArmed ||
+        realOrderAwaitingConfirmation
+      ) {
         stopLive(
           "LOCKED • settings changed"
         );
@@ -2681,6 +3840,13 @@ setDisabled(
   true
 );
 
+setDisabled(
+  "#executeRealTrade",
+  true
+);
+
+clearRealOrderPreview();
+
 loadPaperState();
 
 scoreboard();
@@ -2691,5 +3857,6 @@ updateDemoDisplay();
 updateLiveDisplay();
 
 refreshAccountUI();
+updateRealExecutionStatus();
 
 init();
