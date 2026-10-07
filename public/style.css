@@ -1,20 +1,27 @@
 /* =========================================================
-   VELØRA — LUXURY MOBILE DASHBOARD
-   COMPLETE REPLACEMENT STYLE.CSS
+   VELØRA — LIQUID GOLD LUXURY DASHBOARD
+   COMPLETE STYLE.CSS
    ========================================================= */
 
 :root {
-  --bg: #050606;
-  --panel: rgba(16, 17, 16, 0.94);
-  --panel2: rgba(9, 10, 9, 0.96);
-  --gold: #d9ae4a;
-  --gold-light: #f7dc86;
-  --gold-dark: #76591f;
-  --text: #f5f2e9;
-  --muted: #918d84;
-  --line: rgba(218, 174, 74, 0.22);
-  --green: #21e38a;
-  --red: #ff4d4d;
+  --bg: #030403;
+  --black: #050605;
+  --panel: rgba(10, 11, 10, 0.91);
+  --panel2: rgba(5, 6, 5, 0.96);
+
+  --gold-deep: #5f3c08;
+  --gold-dark: #8d6417;
+  --gold: #d5a43a;
+  --gold-rich: #e9bd55;
+  --gold-light: #ffe7a0;
+  --gold-white: #fff5cf;
+
+  --text: #f7f2e7;
+  --muted: #8e8a80;
+
+  --line: rgba(226, 178, 68, 0.25);
+  --green: #20e38a;
+  --red: #ff4747;
 }
 
 * {
@@ -40,26 +47,28 @@ body {
 
   background:
     radial-gradient(
-      circle at 50% 5%,
-      rgba(207, 160, 55, 0.12),
+      ellipse at 50% -8%,
+      rgba(238, 188, 73, 0.15),
+      transparent 30%
+    ),
+    radial-gradient(
+      ellipse at 0% 28%,
+      rgba(169, 112, 17, 0.08),
       transparent 28%
     ),
-    linear-gradient(
-      rgba(255, 255, 255, 0.018) 1px,
-      transparent 1px
+    radial-gradient(
+      ellipse at 100% 35%,
+      rgba(207, 150, 31, 0.07),
+      transparent 30%
     ),
     linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.014) 1px,
-      transparent 1px
-    ),
-    var(--bg);
+      125deg,
+      #020302 0%,
+      #080907 43%,
+      #020302 100%
+    );
 
-  background-size:
-    auto,
-    34px 34px,
-    34px 34px,
-    auto;
+  background-attachment: fixed;
 }
 
 button,
@@ -89,239 +98,226 @@ button {
   position: relative;
   overflow: hidden;
   isolation: isolate;
+
+  background:
+    radial-gradient(
+      ellipse at 50% 7%,
+      rgba(228, 178, 63, 0.10),
+      transparent 24%
+    ),
+    linear-gradient(
+      115deg,
+      rgba(255,255,255,0.012),
+      transparent 35%,
+      rgba(255,255,255,0.009) 62%,
+      transparent
+    );
 }
-
-/*
-   IMPORTANT:
-   Candle layer = 0
-   Dashboard content = 1
-
-   This prevents the candlesticks from disappearing
-   behind the page background.
-*/
 
 .velora-app > * {
   position: relative;
-  z-index: 1;
+  z-index: 3;
 }
 
 /* =========================================================
-   RED + GREEN TRADING CANDLESTICK BACKGROUND
+   LIQUID / MOLTEN GOLD SIDES
+   ========================================================= */
+
+.velora-app::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      ellipse 42px 180px at -9px 11%,
+      rgba(255, 235, 160, 0.72) 0%,
+      rgba(229, 179, 62, 0.52) 12%,
+      rgba(126, 76, 8, 0.24) 31%,
+      transparent 62%
+    ),
+
+    radial-gradient(
+      ellipse 65px 280px at 2px 27%,
+      rgba(235, 183, 62, 0.42) 0%,
+      rgba(137, 84, 10, 0.23) 24%,
+      transparent 68%
+    ),
+
+    radial-gradient(
+      ellipse 38px 170px at 101% 15%,
+      rgba(255, 230, 142, 0.70) 0%,
+      rgba(222, 165, 47, 0.48) 14%,
+      rgba(113, 67, 7, 0.22) 34%,
+      transparent 65%
+    ),
+
+    radial-gradient(
+      ellipse 62px 300px at 100% 34%,
+      rgba(221, 163, 43, 0.37) 0%,
+      rgba(118, 69, 7, 0.20) 27%,
+      transparent 69%
+    ),
+
+    radial-gradient(
+      circle at 2% 9%,
+      rgba(255, 228, 135, 0.48) 0 1px,
+      transparent 2px
+    ),
+
+    radial-gradient(
+      circle at 97% 19%,
+      rgba(255, 222, 122, 0.40) 0 1px,
+      transparent 2px
+    );
+
+  background-size:
+    auto,
+    auto,
+    auto,
+    auto,
+    18px 24px,
+    21px 27px;
+
+  filter:
+    blur(0.3px)
+    drop-shadow(0 0 15px rgba(217, 159, 43, 0.18));
+
+  opacity: 0.85;
+}
+
+/* =========================================================
+   CANDLESTICKS — HEADER → ACCOUNT FADE
    ========================================================= */
 
 .velora-app::before {
   content: "";
 
   position: absolute;
-  z-index: 0;
+  z-index: 1;
 
-  top: 75px;
-  left: -25px;
-  right: -25px;
+  top: 18px;
+  left: -18px;
+  right: -18px;
   height: 500px;
 
   pointer-events: none;
-  opacity: 0.68;
+  opacity: 0.82;
 
   background:
 
-    /* ---------- GREEN CANDLES ---------- */
+    /* GREEN */
 
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 5% 58% / 2px 105px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      6% 42% / 2px 88px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      5% 48% / 14px 38px no-repeat,
 
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 4% 68% / 18px 48px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      17% 31% / 2px 105px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      16% 38% / 16px 44px no-repeat,
 
+    linear-gradient(var(--green),var(--green))
+      29% 46% / 2px 100px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      28% 52% / 15px 40px no-repeat,
 
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 15% 47% / 2px 120px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      41% 24% / 2px 115px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      40% 32% / 16px 47px no-repeat,
 
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 14% 57% / 19px 55px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      56% 35% / 2px 108px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      55% 42% / 15px 43px no-repeat,
 
+    linear-gradient(var(--green),var(--green))
+      70% 43% / 2px 105px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      69% 49% / 15px 41px no-repeat,
 
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 27% 52% / 2px 115px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      83% 28% / 2px 108px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      82% 35% / 16px 45px no-repeat,
 
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 26% 62% / 18px 48px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      95% 20% / 2px 112px no-repeat,
+    linear-gradient(var(--green),var(--green))
+      94% 27% / 15px 46px no-repeat,
 
+    /* RED */
 
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 40% 35% / 2px 130px no-repeat,
+    linear-gradient(var(--red),var(--red))
+      11% 27% / 2px 108px no-repeat,
+    linear-gradient(var(--red),var(--red))
+      10% 35% / 15px 44px no-repeat,
 
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 39% 47% / 19px 57px no-repeat,
+    linear-gradient(var(--red),var(--red))
+      23% 42% / 2px 105px no-repeat,
+    linear-gradient(var(--red),var(--red))
+      22% 49% / 15px 43px no-repeat,
 
+    linear-gradient(var(--red),var(--red))
+      35% 29% / 2px 100px no-repeat,
+    linear-gradient(var(--red),var(--red))
+      34% 36% / 15px 41px no-repeat,
 
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 55% 45% / 2px 125px no-repeat,
+    linear-gradient(var(--red),var(--red))
+      49% 43% / 2px 112px no-repeat,
+    linear-gradient(var(--red),var(--red))
+      48% 50% / 16px 46px no-repeat,
 
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 54% 55% / 18px 52px no-repeat,
+    linear-gradient(var(--red),var(--red))
+      63% 25% / 2px 106px no-repeat,
+    linear-gradient(var(--red),var(--red))
+      62% 32% / 15px 42px no-repeat,
 
+    linear-gradient(var(--red),var(--red))
+      76% 39% / 2px 108px no-repeat,
+    linear-gradient(var(--red),var(--red))
+      75% 46% / 15px 44px no-repeat,
 
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 72% 55% / 2px 115px no-repeat,
-
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 71% 64% / 18px 48px no-repeat,
-
-
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 83% 42% / 2px 120px no-repeat,
-
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 82% 52% / 19px 55px no-repeat,
-
-
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 94% 27% / 2px 125px no-repeat,
-
-    linear-gradient(
-      var(--green),
-      var(--green)
-    ) 93% 38% / 19px 58px no-repeat,
-
-
-    /* ---------- RED CANDLES ---------- */
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 10% 48% / 2px 120px no-repeat,
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 9% 56% / 18px 52px no-repeat,
-
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 21% 58% / 2px 115px no-repeat,
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 20% 67% / 18px 50px no-repeat,
-
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 33% 43% / 2px 110px no-repeat,
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 32% 53% / 18px 47px no-repeat,
-
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 47% 55% / 2px 125px no-repeat,
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 46% 65% / 19px 54px no-repeat,
-
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 62% 38% / 2px 120px no-repeat,
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 61% 48% / 18px 50px no-repeat,
-
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 78% 50% / 2px 115px no-repeat,
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 77% 60% / 18px 50px no-repeat,
-
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 89% 35% / 2px 120px no-repeat,
-
-    linear-gradient(
-      var(--red),
-      var(--red)
-    ) 88% 45% / 18px 52px no-repeat;
+    linear-gradient(var(--red),var(--red))
+      89% 24% / 2px 108px no-repeat,
+    linear-gradient(var(--red),var(--red))
+      88% 31% / 16px 44px no-repeat;
 
   filter:
-    drop-shadow(0 0 6px rgba(33, 227, 138, 0.42))
-    drop-shadow(0 0 6px rgba(255, 77, 77, 0.32));
+    drop-shadow(0 0 5px rgba(32, 227, 138, 0.55))
+    drop-shadow(0 0 5px rgba(255, 71, 71, 0.48));
 
   -webkit-mask-image:
     linear-gradient(
       to bottom,
-      transparent 0%,
-      black 8%,
-      black 78%,
+      rgba(0,0,0,0.92) 0%,
+      black 23%,
+      rgba(0,0,0,0.72) 54%,
+      rgba(0,0,0,0.24) 76%,
       transparent 100%
     );
 
   mask-image:
     linear-gradient(
       to bottom,
-      transparent 0%,
-      black 8%,
-      black 78%,
+      rgba(0,0,0,0.92) 0%,
+      black 23%,
+      rgba(0,0,0,0.72) 54%,
+      rgba(0,0,0,0.24) 76%,
       transparent 100%
     );
 }
 
 /* =========================================================
-   TOP BAR / BRAND
+   TOP BAR
    ========================================================= */
 
 .topbar {
-  min-height: 185px;
+  min-height: 190px;
 
   display: grid;
   grid-template-columns: 54px 1fr 54px;
@@ -331,19 +327,86 @@ button {
   position: relative;
 }
 
+/* GOLD FLOW ABOVE LOGO */
+
+.topbar::before {
+  content: "";
+
+  position: absolute;
+  z-index: -1;
+
+  width: 185px;
+  height: 62px;
+
+  left: 50%;
+  top: -17px;
+
+  transform: translateX(-50%) rotate(-4deg);
+
+  background:
+    radial-gradient(
+      ellipse at 50% 100%,
+      rgba(255, 244, 195, 0.82) 0%,
+      rgba(235, 188, 73, 0.56) 17%,
+      rgba(146, 91, 11, 0.28) 38%,
+      transparent 68%
+    );
+
+  filter:
+    blur(5px)
+    drop-shadow(0 0 14px rgba(234, 180, 59, 0.32));
+
+  border-radius: 50%;
+  opacity: 0.88;
+
+  animation: veloraGoldFlow 6s ease-in-out infinite alternate;
+}
+
+@keyframes veloraGoldFlow {
+  from {
+    transform:
+      translateX(-50%)
+      rotate(-5deg)
+      scaleX(0.92);
+    opacity: 0.68;
+  }
+
+  to {
+    transform:
+      translateX(-50%)
+      rotate(4deg)
+      scaleX(1.08);
+    opacity: 0.96;
+  }
+}
+
 .icon-button {
   width: 52px;
   height: 52px;
 
-  border-radius: 16px;
-  border: 1px solid rgba(231, 190, 88, 0.45);
+  border-radius: 17px;
+  border: 1px solid rgba(238, 192, 83, 0.48);
 
-  background: rgba(10, 11, 10, 0.84);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(25, 22, 15, 0.94),
+      rgba(5, 6, 5, 0.95)
+    );
+
   color: var(--gold-light);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 239, 186, 0.10),
+    0 0 18px rgba(217, 163, 45, 0.08);
 
   font-size: 22px;
   cursor: pointer;
 }
+
+/* =========================================================
+   BRAND
+   ========================================================= */
 
 .brand {
   text-align: center;
@@ -351,37 +414,79 @@ button {
 }
 
 .brand-mark {
-  width: 52px;
-  height: 52px;
+  width: 55px;
+  height: 55px;
+
   margin: 0 auto 5px;
 
   display: grid;
   place-items: center;
 
-  color: var(--gold-light);
-
   font-family: Georgia, serif;
   font-weight: 800;
-  font-size: 37px;
+  font-size: 39px;
 
-  text-shadow:
-    0 0 12px rgba(245, 206, 106, 0.35),
-    0 0 28px rgba(245, 206, 106, 0.18);
+  color: transparent;
+
+  background:
+    linear-gradient(
+      115deg,
+      #725016 0%,
+      #d9a83f 22%,
+      #fff1b4 45%,
+      #c28a24 66%,
+      #ffe395 84%,
+      #7e5715 100%
+    );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  filter:
+    drop-shadow(0 0 6px rgba(255, 221, 128, 0.35))
+    drop-shadow(0 0 18px rgba(213, 155, 35, 0.22));
 }
 
 .brand h1 {
   margin: 0;
 
-  font-family: Georgia, "Times New Roman", serif;
+  font-family:
+    Georgia,
+    "Times New Roman",
+    serif;
+
   font-size: clamp(35px, 10vw, 58px);
   font-weight: 500;
 
-  letter-spacing: 0.2em;
+  letter-spacing: 0.20em;
   line-height: 1;
+
+  color: #f6f1e6;
+
+  text-shadow:
+    0 2px 14px rgba(0,0,0,0.95);
 }
 
 .brand h1 span {
-  color: var(--gold-light);
+  color: transparent;
+
+  background:
+    linear-gradient(
+      110deg,
+      #6c470d 0%,
+      #bd8422 18%,
+      #ffe8a2 40%,
+      #fff6d1 50%,
+      #d59c31 66%,
+      #8b5d12 84%,
+      #f2ca67 100%
+    );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  filter:
+    drop-shadow(0 0 5px rgba(234, 183, 66, 0.30));
 }
 
 .brand p {
@@ -391,16 +496,22 @@ button {
 
   font-size: 9px;
   letter-spacing: 0.35em;
+
+  text-shadow:
+    0 2px 8px #000;
 }
 
 .brand small {
   display: block;
   margin-top: 11px;
 
-  color: var(--gold);
+  color: var(--gold-rich);
 
   font-size: 8px;
   letter-spacing: 0.32em;
+
+  text-shadow:
+    0 2px 8px #000;
 }
 
 /* =========================================================
@@ -411,15 +522,25 @@ button {
   padding: 13px 15px;
   margin-bottom: 14px;
 
-  border: 1px solid var(--line);
+  border:
+    1px solid
+    rgba(222, 171, 58, 0.30);
+
   border-radius: 18px;
 
   background:
     linear-gradient(
       135deg,
-      rgba(218, 174, 74, 0.08),
-      rgba(8, 9, 8, 0.94)
+      rgba(46, 36, 18, 0.82),
+      rgba(7, 8, 7, 0.94) 45%,
+      rgba(13, 12, 8, 0.96)
     );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 232, 169, 0.07),
+    0 15px 35px rgba(0,0,0,0.30);
+
+  backdrop-filter: blur(10px);
 
   display: grid;
   grid-template-columns: 1fr auto auto;
@@ -437,24 +558,57 @@ button {
 #logout {
   padding: 10px 12px;
 
-  border: 1px solid rgba(218, 174, 74, 0.35);
+  border:
+    1px solid
+    rgba(255, 232, 155, 0.60);
+
   border-radius: 12px;
 
-  color: #111;
+  color: #100d06;
 
   background:
     linear-gradient(
-      135deg,
-      var(--gold-light),
-      var(--gold)
+      115deg,
+      #8d6215 0%,
+      #d9a63c 27%,
+      #ffe69a 50%,
+      #c58a23 73%,
+      #f1ca67 100%
     );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.65),
+    0 5px 18px rgba(209,153,37,0.16);
 
   font-weight: 800;
 }
 
 #logout.secondary {
-  background: #121312;
+  background:
+    linear-gradient(
+      145deg,
+      #171713,
+      #080908
+    );
+
   color: #aaa69d;
+}
+
+/* =========================================================
+   LUXURY GLASS PANELS
+   ========================================================= */
+
+.account-panel,
+.execution-panel,
+.stats,
+.mindset {
+  backdrop-filter:
+    blur(13px)
+    saturate(115%);
+
+  -webkit-backdrop-filter:
+    blur(13px)
+    saturate(115%);
 }
 
 /* =========================================================
@@ -464,19 +618,24 @@ button {
 .account-panel {
   padding: 18px;
 
-  border: 1px solid var(--line);
+  border:
+    1px solid
+    rgba(221, 171, 58, 0.28);
+
   border-radius: 24px;
 
   background:
     linear-gradient(
       145deg,
-      rgba(22, 23, 21, 0.97),
-      rgba(7, 8, 7, 0.96)
+      rgba(28, 26, 19, 0.93),
+      rgba(8, 9, 8, 0.93) 48%,
+      rgba(16, 14, 9, 0.94)
     );
 
   box-shadow:
-    0 18px 45px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    0 20px 48px rgba(0,0,0,0.42),
+    inset 0 1px 0 rgba(255,240,192,0.08),
+    inset 20px 0 35px rgba(189,132,27,0.025);
 
   display: grid;
   grid-template-columns: 1fr 1.35fr auto;
@@ -499,8 +658,12 @@ button {
 
 .balance-area strong,
 .mode-display strong {
-  color: var(--gold-light);
   font-size: 13px;
+
+  color: var(--gold-light);
+
+  text-shadow:
+    0 0 10px rgba(235,185,71,0.20);
 }
 
 .account-select select {
@@ -509,9 +672,18 @@ button {
   padding: 0 12px;
 
   color: var(--text);
-  background: #090a09;
 
-  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    linear-gradient(
+      145deg,
+      #11110e,
+      #070807
+    );
+
+  border:
+    1px solid
+    rgba(255,255,255,0.11);
+
   border-radius: 13px;
 
   outline: none;
@@ -538,10 +710,22 @@ button {
   min-width: 0;
   padding: 15px 12px;
 
-  border: 1px solid var(--line);
+  border:
+    1px solid
+    rgba(220,169,57,0.26);
+
   border-radius: 18px;
 
-  background: rgba(12, 13, 12, 0.94);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(25,23,17,0.92),
+      rgba(7,8,7,0.95)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,235,174,0.05),
+    0 10px 25px rgba(0,0,0,0.25);
 }
 
 .setting-card > span {
@@ -590,7 +774,10 @@ button {
   aspect-ratio: 1;
 
   border-radius: 50%;
-  border: 2px solid var(--gold);
+
+  border:
+    2px solid
+    rgba(236,188,77,0.92);
 
   display: flex;
   flex-direction: column;
@@ -601,15 +788,17 @@ button {
 
   background:
     radial-gradient(
-      circle,
-      rgba(221, 175, 69, 0.15),
-      rgba(7, 8, 7, 0.97) 67%
+      circle at 45% 38%,
+      rgba(255,226,139,0.16),
+      rgba(164,111,18,0.08) 27%,
+      rgba(6,7,6,0.97) 68%
     );
 
   box-shadow:
-    0 0 0 7px rgba(217, 174, 74, 0.08),
-    0 0 24px rgba(217, 174, 74, 0.25),
-    inset 0 0 30px rgba(217, 174, 74, 0.09);
+    0 0 0 7px rgba(217,174,74,0.055),
+    0 0 28px rgba(217,164,48,0.23),
+    inset 0 0 35px rgba(231,181,65,0.10),
+    inset 0 1px 2px rgba(255,244,200,0.30);
 }
 
 .scanner-ring::before {
@@ -619,7 +808,10 @@ button {
   inset: 10px;
 
   border-radius: 50%;
-  border: 1px solid rgba(247, 220, 134, 0.25);
+
+  border:
+    1px solid
+    rgba(255,224,137,0.28);
 }
 
 .pulse-line {
@@ -629,7 +821,8 @@ button {
   line-height: 1;
 
   text-shadow:
-    0 0 15px rgba(247, 220, 134, 0.5);
+    0 0 8px rgba(255,226,143,0.72),
+    0 0 20px rgba(219,159,36,0.40);
 }
 
 .scanner strong {
@@ -651,7 +844,7 @@ button {
 }
 
 /* =========================================================
-   GOLD BUTTON
+   LIQUID METAL GOLD BUTTON
    ========================================================= */
 
 .gold-button {
@@ -659,26 +852,39 @@ button {
   min-height: 58px;
   margin-top: 18px;
 
-  border: 1px solid #f1d47c;
+  border:
+    1px solid
+    #ffe6a0;
+
   border-radius: 18px;
 
   background:
     linear-gradient(
-      180deg,
-      #f8dd85 0%,
-      #d6a842 52%,
-      #ae8128 100%
+      112deg,
+      #76500d 0%,
+      #b97d18 13%,
+      #e5b343 29%,
+      #fff0ad 44%,
+      #d49a2d 58%,
+      #9b6613 72%,
+      #edc25c 88%,
+      #80550e 100%
     );
 
-  color: #090909;
+  color: #0b0904;
 
   font-weight: 900;
   font-size: 17px;
   letter-spacing: 0.04em;
 
+  text-shadow:
+    0 1px 0 rgba(255,244,201,0.30);
+
   box-shadow:
-    0 8px 30px rgba(211, 165, 55, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    0 9px 30px rgba(206,146,30,0.20),
+    0 0 20px rgba(239,192,82,0.08),
+    inset 0 2px 0 rgba(255,255,255,0.66),
+    inset 0 -2px 3px rgba(83,47,4,0.34);
 
   cursor: pointer;
 }
@@ -698,9 +904,21 @@ button {
   padding: 17px;
 
   border-radius: 22px;
-  border: 1px solid var(--line);
 
-  background: var(--panel);
+  border:
+    1px solid
+    rgba(220,169,57,0.25);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(24,22,16,0.92),
+      rgba(7,8,7,0.95)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,239,188,0.05),
+    0 15px 35px rgba(0,0,0,0.28);
 }
 
 .execution-heading {
@@ -731,9 +949,18 @@ button {
   margin-top: 10px;
 
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
 
-  background: #0c0d0c;
+  border:
+    1px solid
+    rgba(255,255,255,0.08);
+
+  background:
+    linear-gradient(
+      180deg,
+      #10110f,
+      #080908
+    );
+
   color: #8b8880;
 
   font-weight: 800;
@@ -741,12 +968,12 @@ button {
 
 .stop-button:not(:disabled) {
   color: #ff7777;
-  border-color: rgba(255, 77, 77, 0.3);
+  border-color: rgba(255,77,77,0.30);
 }
 
 .live-limits {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3,1fr);
   gap: 8px;
 
   margin-top: 15px;
@@ -760,11 +987,15 @@ button {
 .live-limits input {
   width: 100%;
   height: 43px;
+
   margin-top: 6px;
   padding: 0 10px;
 
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+
+  border:
+    1px solid
+    rgba(255,255,255,0.09);
 
   background: #080908;
   color: white;
@@ -803,12 +1034,6 @@ body:has(#accountMode:not(:empty)) #demoControls {
   display: block;
 }
 
-/*
-   app.js can override these using inline display values
-   after determining whether the selected account is
-   DEMO or REAL.
-*/
-
 /* =========================================================
    STATS
    ========================================================= */
@@ -817,9 +1042,12 @@ body:has(#accountMode:not(:empty)) #demoControls {
   margin-top: 16px;
 
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3,1fr);
 
-  border: 1px solid var(--line);
+  border:
+    1px solid
+    rgba(222,171,59,0.25);
+
   border-radius: 20px;
 
   overflow: hidden;
@@ -827,9 +1055,14 @@ body:has(#accountMode:not(:empty)) #demoControls {
   background:
     linear-gradient(
       135deg,
-      rgba(18, 19, 17, 0.98),
-      rgba(7, 8, 7, 0.98)
+      rgba(26,23,16,0.94),
+      rgba(7,8,7,0.96) 55%,
+      rgba(16,14,9,0.95)
     );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,239,188,0.05),
+    0 14px 32px rgba(0,0,0,0.27);
 }
 
 .stats article {
@@ -840,7 +1073,9 @@ body:has(#accountMode:not(:empty)) #demoControls {
 }
 
 .stats article + article {
-  border-left: 1px solid rgba(218, 174, 74, 0.17);
+  border-left:
+    1px solid
+    rgba(218,174,74,0.17);
 }
 
 .stats span {
@@ -858,7 +1093,11 @@ body:has(#accountMode:not(:empty)) #demoControls {
 
   color: var(--gold-light);
 
-  font-size: clamp(17px, 5vw, 25px);
+  font-size:
+    clamp(17px,5vw,25px);
+
+  text-shadow:
+    0 0 11px rgba(235,181,62,0.18);
 }
 
 /* =========================================================
@@ -870,18 +1109,26 @@ body:has(#accountMode:not(:empty)) #demoControls {
   padding: 20px;
 
   border-radius: 22px;
-  border: 1px solid var(--line);
+
+  border:
+    1px solid
+    rgba(220,169,57,0.24);
 
   background:
     linear-gradient(
       135deg,
-      rgba(217, 174, 74, 0.07),
-      rgba(10, 11, 10, 0.97)
+      rgba(49,38,17,0.80),
+      rgba(9,10,9,0.95) 52%,
+      rgba(17,15,10,0.94)
     );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,235,173,0.055),
+    0 14px 34px rgba(0,0,0,0.28);
 }
 
 .eyebrow {
-  color: var(--gold);
+  color: var(--gold-rich);
 
   font-size: 9px;
   font-weight: 800;
@@ -891,11 +1138,15 @@ body:has(#accountMode:not(:empty)) #demoControls {
 .mindset blockquote {
   margin: 12px 0 8px;
 
-  font-family: Georgia, "Times New Roman", serif;
+  font-family:
+    Georgia,
+    "Times New Roman",
+    serif;
 
   color: #f0eadb;
 
-  font-size: clamp(18px, 5vw, 25px);
+  font-size:
+    clamp(18px,5vw,25px);
 }
 
 .mindset p {
@@ -905,6 +1156,97 @@ body:has(#accountMode:not(:empty)) #demoControls {
 
   font-size: 11px;
   line-height: 1.5;
+}
+
+/* =========================================================
+   TERMS / RISK — QUIETER + SMALLER
+   Covers common legal/risk containers without changing JS
+   ========================================================= */
+
+.terms,
+.terms-panel,
+.risk-panel,
+.legal-panel,
+.disclosure-panel,
+.risk-info,
+.terms-info {
+  margin-top: 12px !important;
+  padding: 12px 14px !important;
+
+  border-radius: 16px !important;
+
+  border:
+    1px solid
+    rgba(218,174,74,0.13) !important;
+
+  background:
+    rgba(8,9,8,0.74) !important;
+
+  box-shadow: none !important;
+}
+
+.terms h1,
+.terms h2,
+.terms h3,
+.terms-panel h1,
+.terms-panel h2,
+.terms-panel h3,
+.risk-panel h1,
+.risk-panel h2,
+.risk-panel h3,
+.legal-panel h1,
+.legal-panel h2,
+.legal-panel h3,
+.disclosure-panel h1,
+.disclosure-panel h2,
+.disclosure-panel h3,
+.risk-info h1,
+.risk-info h2,
+.risk-info h3,
+.terms-info h1,
+.terms-info h2,
+.terms-info h3 {
+  margin:
+    0 0 7px !important;
+
+  color:
+    rgba(225,185,91,0.70) !important;
+
+  font-size:
+    10px !important;
+
+  font-weight:
+    700 !important;
+
+  letter-spacing:
+    0.10em !important;
+
+  text-transform:
+    uppercase;
+}
+
+.terms p,
+.terms li,
+.terms-panel p,
+.terms-panel li,
+.risk-panel p,
+.risk-panel li,
+.legal-panel p,
+.legal-panel li,
+.disclosure-panel p,
+.disclosure-panel li,
+.risk-info p,
+.risk-info li,
+.terms-info p,
+.terms-info li {
+  color:
+    rgba(185,181,170,0.62) !important;
+
+  font-size:
+    8px !important;
+
+  line-height:
+    1.45 !important;
 }
 
 /* =========================================================
@@ -920,20 +1262,22 @@ body:has(#accountMode:not(:empty)) #demoControls {
    ========================================================= */
 
 footer {
-  padding: 22px 0 5px;
+  padding: 16px 0 5px;
 
-  color: rgba(218, 174, 74, 0.38);
+  color:
+    rgba(218,174,74,0.27);
 
   text-align: center;
-  font-size: 8px;
-  letter-spacing: 0.23em;
+
+  font-size: 7px;
+  letter-spacing: 0.19em;
 }
 
 /* =========================================================
-   SMALL PHONE OPTIMIZATION
+   MOBILE
    ========================================================= */
 
-@media (max-width: 520px) {
+@media (max-width:520px) {
 
   .velora-app {
     padding-left: 14px;
@@ -941,16 +1285,28 @@ footer {
   }
 
   .velora-app::before {
-    top: 80px;
-    left: -40px;
-    right: -40px;
-    height: 470px;
-    opacity: 0.62;
+    top: 25px;
+    left: -38px;
+    right: -38px;
+    height: 455px;
+    opacity: 0.75;
+  }
+
+  .velora-app::after {
+    opacity: 0.78;
   }
 
   .topbar {
-    grid-template-columns: 45px 1fr 45px;
-    min-height: 170px;
+    grid-template-columns:
+      45px 1fr 45px;
+
+    min-height: 175px;
+  }
+
+  .topbar::before {
+    width: 145px;
+    height: 52px;
+    top: -13px;
   }
 
   .icon-button {
@@ -960,6 +1316,12 @@ footer {
     border-radius: 14px;
 
     font-size: 18px;
+  }
+
+  .brand-mark {
+    width: 49px;
+    height: 49px;
+    font-size: 35px;
   }
 
   .brand h1 {
@@ -975,7 +1337,8 @@ footer {
   }
 
   .connection-strip {
-    grid-template-columns: 1fr auto;
+    grid-template-columns:
+      1fr auto;
   }
 
   #status {
@@ -983,7 +1346,8 @@ footer {
   }
 
   .account-panel {
-    grid-template-columns: 0.8fr 1.4fr;
+    grid-template-columns:
+      0.8fr 1.4fr;
   }
 
   .mode-display {
@@ -994,7 +1358,9 @@ footer {
   }
 
   .trade-console {
-    grid-template-columns: 1fr 1.2fr 1fr;
+    grid-template-columns:
+      1fr 1.2fr 1fr;
+
     gap: 7px;
   }
 
@@ -1003,7 +1369,7 @@ footer {
   }
 
   .scanner-ring {
-    width: min(35vw, 150px);
+    width: min(35vw,150px);
   }
 
   .pulse-line {
@@ -1029,17 +1395,18 @@ footer {
 }
 
 /* =========================================================
-   VERY SMALL DEVICES
+   VERY SMALL PHONES
    ========================================================= */
 
-@media (max-width: 370px) {
+@media (max-width:370px) {
 
   .brand h1 {
     font-size: 32px;
   }
 
   .trade-console {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns:
+      1fr 1fr;
   }
 
   .scanner {
@@ -1051,3 +1418,13 @@ footer {
     width: 125px;
   }
 }
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar::before {
+    animation: none;
+  }
+   }
