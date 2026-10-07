@@ -136,6 +136,10 @@ let latestLiveProposalPayout = null;
 let latestLiveDirection = null;
 let latestLiveStake = null;
 let latestLiveDuration = null;
+const REAL_PROPOSAL_MAX_AGE_MS = 30000;
+
+let latestLiveProposalCreatedAt = 0;
+let realProposalExpiryTimer = null;
 
 
 /* =========================================================
@@ -999,6 +1003,12 @@ function refreshVeloraPanels() {
    ========================================================= */
 
 function clearRealOrderPreview() {
+   if (realProposalExpiryTimer) {
+  clearTimeout(realProposalExpiryTimer);
+  realProposalExpiryTimer = null;
+}
+
+latestLiveProposalCreatedAt = 0;
   realOrderAwaitingConfirmation =
     false;
 
@@ -2990,6 +3000,15 @@ async function connectFeed() {
                 m.proposal
                   .payout
               );
+             latestLiveProposalCreatedAt = Date.now();
+
+if (realProposalExpiryTimer) {
+  clearTimeout(realProposalExpiryTimer);
+}
+
+realProposalExpiryTimer = setTimeout(() => {
+  clearRealOrderPreview();
+}, REAL_PROPOSAL_MAX_AGE_MS);
 
             liveSignals++;
 
