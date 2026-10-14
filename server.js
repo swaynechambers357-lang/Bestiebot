@@ -1174,7 +1174,19 @@ const server =
               requestedAccount
             );
 
-
+if (
+  accountMode === "REAL" &&
+  !REAL_TRADING_ENABLED
+) {
+  return json(
+    res,
+    423,
+    {
+      error: "REAL_ACCOUNT_CONNECTION_LOCKED",
+      message: "Real-account trading connections are disabled while real execution is locked."
+    }
+  );
+}
           const otpResult =
             await fetchJson(
               "https://api.derivws.com/trading/v1/options/accounts/" +
