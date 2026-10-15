@@ -33,3 +33,25 @@ footer{padding:18px 0 5px;color:rgba(218,174,74,.65);text-align:center;font-size
 @media(max-width:520px){.velora-app{padding-left:14px;padding-right:14px}.velora-app::before{top:25px;left:-38px;right:-38px;height:455px;opacity:.75}.velora-app::after{opacity:.78}.topbar{grid-template-columns:45px 1fr 45px;min-height:175px}.topbar::before{width:145px;height:52px;top:-13px}.icon-button{width:43px;height:43px;border-radius:14px;font-size:18px}.brand-mark{width:49px;height:49px;font-size:35px}.brand h1{font-size:39px}.brand p{font-size:7px}.brand small{font-size:6px}.connection-strip{grid-template-columns:1fr auto}#status{grid-column:1/-1}.account-panel{grid-template-columns:.8fr 1.4fr}.mode-display{grid-column:1/-1;display:flex;justify-content:space-between}.trade-console{grid-template-columns:1fr 1.2fr 1fr;gap:7px}.setting-card{padding:12px 8px}.scanner-ring{width:min(35vw,150px)}.pulse-line{font-size:27px}.scanner strong{font-size:9px}.scanner span{font-size:6px}.gold-button{min-height:55px;font-size:15px}.stats article{padding:16px 4px}}
 @media(max-width:370px){.brand h1{font-size:32px}.trade-console{grid-template-columns:1fr 1fr}.scanner{grid-column:1/-1;grid-row:1}.scanner-ring{width:125px}}
 @media(prefers-reduced-motion:reduce){.topbar::before{animation:none}html{scroll-behavior:auto}}
+/* VELØRA — LUXURY MARBLE BACKGROUND */
+
+.velora-app {
+  isolation: isolate;
+  position: relative;
+  background-color: #030403;
+  background-image: url("./file_000000000cac8230ac42fb70abce6cb6.png");
+  background-position: center top;
+  background-size: 100% auto;
+  background-repeat: no-repeat;
+}
+
+/* Hide old decorative CSS candles */
+.velora-app::before {
+  display: none !important;
+}
+
+/* Keep dashboard controls above artwork */
+.velora-app > * {
+  position: relative;
+  z-index: 3;
+}
