@@ -1447,10 +1447,11 @@ if (
 
 
         const allowedFiles = [
-          "index.html",
-          "app.js",
-          "style.css"
-        ];
+  "index.html",
+  "app.js",
+  "style.css",
+  "file_000000000cac8230ac42fb70abce6cb6.png"
+];
 
 
         if (
@@ -1494,7 +1495,9 @@ if (
             : file.endsWith(".js")
               ? "text/javascript; charset=utf-8"
 
-              : "text/css; charset=utf-8";
+              : file.endsWith(".png")
+? "image/png"
+: "text/css; charset=utf-8";
 
 
         const body =
