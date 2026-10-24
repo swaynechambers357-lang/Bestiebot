@@ -23,11 +23,9 @@ import { URL, URLSearchParams } from "node:url";
 
    IMPORTANT
    ---------------------------------------------------------
-   REAL execution is OFF unless the server environment has:
-
-   REAL_TRADING_ENABLED=true
-
-   Browser JavaScript cannot override this master switch.
+   REAL execution remains disabled regardless of environment flags.
+   Server-owned execution and durable controls must be implemented
+   and verified before enabling real funds.
    ========================================================= */
 
 
@@ -507,7 +505,7 @@ async function fetchJson(
   const response =
     await fetch(
       url,
-      options
+      { ...options, signal: AbortSignal.timeout(12000) }
     );
 
   let data;
@@ -593,6 +591,19 @@ const server =
             res
           );
 
+
+        // Reject cross-site state-changing requests before routing.
+        // A missing Origin is permitted for same-origin non-browser clients;
+        // authenticated browser requests normally include it.
+        if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+          const origin = req.headers.origin;
+          const expectedOrigin = BASE_URL
+            ? new URL(BASE_URL).origin
+            : `http://${req.headers.host}`;
+          if (origin && origin !== expectedOrigin) {
+            return json(res, 403, { error: "ORIGIN_NOT_ALLOWED" });
+          }
+        }
 
         /* =================================================
            HEALTH
@@ -1322,6 +1333,22 @@ const server =
           );
         }
 
+
+        /* =================================================
+           REAL ORDER SUBMISSION — FAIL CLOSED
+           No request body is accepted or forwarded to Deriv.
+           This endpoint must not be enabled until durable,
+           account-owned execution is implemented and audited.
+           ================================================= */
+        if (u.pathname === "/api/real-orders") {
+          if (!methodAllowed(req, res, ["POST"])) return;
+          if (!requireAuthentication(session, res)) return;
+          return json(res, 423, {
+            allowed: false,
+            error: "REAL_EXECUTION_LOCKED",
+            message: "Server-owned real order execution is not available."
+          });
+        }
 
         /* =================================================
            REAL EXECUTION GATE
