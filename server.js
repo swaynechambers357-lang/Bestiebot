@@ -1175,6 +1175,28 @@ const server =
             );
 
 
+          /*
+             IMPORTANT: A browser WebSocket OTP can authorize
+             trading independently of the UI confirmation gate.
+             Do not issue REAL account OTPs while live execution
+             is disabled. This also blocks REAL proposal previews
+             until a separate read-only connection is implemented.
+          */
+          if (
+            accountMode !== "DEMO" &&
+            !REAL_TRADING_ENABLED
+          ) {
+            return json(
+              res,
+              423,
+              {
+                error: "REAL_EXECUTION_LOCKED",
+                message: "Real account trading connections are disabled by the VELØRA server."
+              }
+            );
+          }
+
+
           const otpResult =
             await fetchJson(
               "https://api.derivws.com/trading/v1/options/accounts/" +
