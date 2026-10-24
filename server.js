@@ -55,12 +55,10 @@ const BASE_URL =
    REAL-MONEY MASTER LOCK
    ========================================================= */
 
-const REAL_TRADING_ENABLED =
-  String(
-    process.env.REAL_TRADING_ENABLED || ""
-  )
-    .trim()
-    .toLowerCase() === "true";
+// Live execution is unavailable until a server-owned order engine
+// enforces account ownership, per-order consent and risk limits.
+// Do not enable it by changing an environment variable alone.
+const REAL_TRADING_ENABLED = false;
 
 
 /* =========================================================
