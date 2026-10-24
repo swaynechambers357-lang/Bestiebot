@@ -23,11 +23,9 @@ import { URL, URLSearchParams } from "node:url";
 
    IMPORTANT
    ---------------------------------------------------------
-   REAL execution is OFF unless the server environment has:
-
-   REAL_TRADING_ENABLED=true
-
-   Browser JavaScript cannot override this master switch.
+   REAL execution remains disabled regardless of environment flags.
+   Server-owned execution and durable controls must be implemented
+   and verified before enabling real funds.
    ========================================================= */
 
 
@@ -55,12 +53,10 @@ const BASE_URL =
    REAL-MONEY MASTER LOCK
    ========================================================= */
 
-const REAL_TRADING_ENABLED =
-  String(
-    process.env.REAL_TRADING_ENABLED || ""
-  )
-    .trim()
-    .toLowerCase() === "true";
+// Live execution is unavailable until a server-owned order engine
+// enforces account ownership, per-order consent and risk limits.
+// Do not enable it by changing an environment variable alone.
+const REAL_TRADING_ENABLED = false;
 
 
 /* =========================================================
@@ -509,7 +505,7 @@ async function fetchJson(
   const response =
     await fetch(
       url,
-      options
+      { ...options, signal: AbortSignal.timeout(12000) }
     );
 
   let data;
@@ -595,6 +591,19 @@ const server =
             res
           );
 
+
+        // Reject cross-site state-changing requests before routing.
+        // A missing Origin is permitted for same-origin non-browser clients;
+        // authenticated browser requests normally include it.
+        if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+          const origin = req.headers.origin;
+          const expectedOrigin = BASE_URL
+            ? new URL(BASE_URL).origin
+            : `http://${req.headers.host}`;
+          if (origin && origin !== expectedOrigin) {
+            return json(res, 403, { error: "ORIGIN_NOT_ALLOWED" });
+          }
+        }
 
         /* =================================================
            HEALTH
@@ -819,6 +828,15 @@ const server =
           }
 
 
+          // PKCE state is short-lived and may be used only once.
+          if (!session.oauthCreatedAt ||
+              Date.now() - session.oauthCreatedAt > 10 * 60 * 1000) {
+            delete session.verifier;
+            delete session.state;
+            delete session.oauthCreatedAt;
+            return json(res, 400, { error: "Login request expired" });
+          }
+
           const code =
             u.searchParams.get(
               "code"
@@ -837,6 +855,13 @@ const server =
           }
 
 
+          // Consume the state before the network request to prevent
+          // concurrent callback replay using the same PKCE verifier.
+          const pkceVerifier = session.verifier;
+          delete session.verifier;
+          delete session.state;
+          delete session.oauthCreatedAt;
+
           const tokenBody =
             new URLSearchParams({
               grant_type:
@@ -848,7 +873,7 @@ const server =
               code,
 
               code_verifier:
-                session.verifier,
+                pkceVerifier,
 
               redirect_uri:
                 `${BASE_URL}/callback`
@@ -1175,6 +1200,16 @@ const server =
             );
 
 
+          // Security: a browser receiving a REAL account WebSocket OTP
+          // can bypass client-side trading controls. Until orders are
+          // executed through a server-enforced risk engine, refuse it.
+          if (accountMode === "REAL") {
+            return json(res, 423, {
+              error: "REAL_ACCOUNT_CONNECTION_LOCKED",
+              message: "Real-account trading credentials are unavailable until server-enforced order authorization is implemented."
+            });
+          }
+
           const otpResult =
             await fetchJson(
               "https://api.derivws.com/trading/v1/options/accounts/" +
@@ -1298,6 +1333,22 @@ const server =
           );
         }
 
+
+        /* =================================================
+           REAL ORDER SUBMISSION — FAIL CLOSED
+           No request body is accepted or forwarded to Deriv.
+           This endpoint must not be enabled until durable,
+           account-owned execution is implemented and audited.
+           ================================================= */
+        if (u.pathname === "/api/real-orders") {
+          if (!methodAllowed(req, res, ["POST"])) return;
+          if (!requireAuthentication(session, res)) return;
+          return json(res, 423, {
+            allowed: false,
+            error: "REAL_EXECUTION_LOCKED",
+            message: "Server-owned real order execution is not available."
+          });
+        }
 
         /* =================================================
            REAL EXECUTION GATE
