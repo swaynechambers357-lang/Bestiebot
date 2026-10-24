@@ -817,6 +817,15 @@ const server =
           }
 
 
+          // PKCE state is short-lived and may be used only once.
+          if (!session.oauthCreatedAt ||
+              Date.now() - session.oauthCreatedAt > 10 * 60 * 1000) {
+            delete session.verifier;
+            delete session.state;
+            delete session.oauthCreatedAt;
+            return json(res, 400, { error: "Login request expired" });
+          }
+
           const code =
             u.searchParams.get(
               "code"
@@ -835,6 +844,13 @@ const server =
           }
 
 
+          // Consume the state before the network request to prevent
+          // concurrent callback replay using the same PKCE verifier.
+          const pkceVerifier = session.verifier;
+          delete session.verifier;
+          delete session.state;
+          delete session.oauthCreatedAt;
+
           const tokenBody =
             new URLSearchParams({
               grant_type:
@@ -846,7 +862,7 @@ const server =
               code,
 
               code_verifier:
-                session.verifier,
+                pkceVerifier,
 
               redirect_uri:
                 `${BASE_URL}/callback`
