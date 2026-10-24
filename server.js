@@ -1175,6 +1175,16 @@ const server =
             );
 
 
+          // Security: a browser receiving a REAL account WebSocket OTP
+          // can bypass client-side trading controls. Until orders are
+          // executed through a server-enforced risk engine, refuse it.
+          if (accountMode === "REAL") {
+            return json(res, 423, {
+              error: "REAL_ACCOUNT_CONNECTION_LOCKED",
+              message: "Real-account trading credentials are unavailable until server-enforced order authorization is implemented."
+            });
+          }
+
           const otpResult =
             await fetchJson(
               "https://api.derivws.com/trading/v1/options/accounts/" +
