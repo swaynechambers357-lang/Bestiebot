@@ -35,6 +35,16 @@ test("security and public endpoints", async () => {
     assert.equal(accounts.status, 401);
     const gate = await request("/api/real-execution/check", { method: "POST" });
     assert.equal(gate.status, 401);
+    const realOrder = await request("/api/real-orders", { method: "POST" });
+    assert.equal(realOrder.status, 401);
+    const blockedCrossOrigin = await request("/api/logout", {
+      method: "POST", headers: { Origin: "https://attacker.invalid" }
+    });
+    assert.equal(blockedCrossOrigin.status, 403);
+    const allowedSameOrigin = await request("/api/logout", {
+      method: "POST", headers: { Origin: base }
+    });
+    assert.equal(allowedSameOrigin.status, 200);
     const page = await request("/");
     assert.equal(page.status, 200);
     assert.match(page.headers.get("content-security-policy") || "", /default-src/);
