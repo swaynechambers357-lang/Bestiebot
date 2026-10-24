@@ -12,4 +12,4 @@ jobs:
           node-version: '22'
       - run: node --check server.js
       - run: node --check public/app.js
-      - run: node --test tests/smoke.test.js
+      - run: node --test tests/*.test.js
