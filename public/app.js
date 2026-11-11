@@ -1165,7 +1165,7 @@ function updateRealExecutionStatus() {
 
   setText(
     "#realExecutionMessage",
-    "Real-money execution is locked by the VELØRA server. Real accounts may be used for market monitoring and proposal previews."
+    "Real-account feed access is disabled while the server execution lock is on. Use a demo account for live R_50 monitoring and testing."
   );
 
   clearRealOrderPreview();
@@ -3413,6 +3413,29 @@ realProposalExpiryTimer = setTimeout(() => {
       };
 
   } catch (e) {
+    // A server-side 423 is an intentional safety lock, not a
+    // transient network failure. Do not retry it every 3 seconds.
+    if (
+      e.status === 423 &&
+      e.data?.error === "REAL_ACCOUNT_CONNECTION_LOCKED"
+    ) {
+      manualFeed = false;
+      connectedAccountId = null;
+      connectedAccountMode = null;
+      demoTradeEnabled = false;
+      liveArmed = false;
+      setText(
+        "#status",
+        "REAL ACCOUNT CONNECTION LOCKED • select a DEMO account"
+      );
+      setText(
+        "#liveTradeStatus",
+        "LIVE: server safety lock is active • DEMO mode only"
+      );
+      setDisabled("#connect", !account?.value);
+      return;
+    }
+
     setText(
       "#status",
       "Feed error: " +
