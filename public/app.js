@@ -119,6 +119,18 @@ let demoWins = 0;
 let demoLosses = 0;
 
 const MAX_DEMO_TRADES = 20;
+const MAX_DEMO_STAKE = 1;
+const MAX_DEMO_SESSION_LOSS = 5;
+
+function demoRiskCheck() {
+  const stake = numberValue("#stake", 0);
+  if (!Number.isFinite(stake) || stake <= 0 || stake > MAX_DEMO_STAKE) {
+    return "DEMO STAKE MUST BE BETWEEN $0.01 AND $1.00";
+  }
+  if (demoTrades >= MAX_DEMO_TRADES) return "DEMO TRADE LIMIT REACHED";
+  if (actualDemoPL <= -MAX_DEMO_SESSION_LOSS) return "DEMO LOSS LIMIT REACHED";
+  return null;
+}
 
 
 /* =========================================================
@@ -1389,6 +1401,13 @@ function detectAccountMode(account) {
    ========================================================= */
 
 function requestDemoProposal(direction) {
+  const riskError = demoRiskCheck();
+  if (riskError) {
+    demoTradeEnabled = false;
+    setText("#demoTradeStatus", riskError);
+    return false;
+  }
+
   if (
     !demoTradeEnabled
   ) {
@@ -3566,6 +3585,12 @@ if (startDemoButton) {
           "Actual demo trading: ENTER A VALID STAKE"
         );
 
+        return;
+      }
+
+      const startRisk = numberValue("#stake", 0);
+      if (!Number.isFinite(startRisk) || startRisk <= 0 || startRisk > MAX_DEMO_STAKE) {
+        setText("#demoTradeStatus", "DEMO STAKE MUST BE BETWEEN $0.01 AND $1.00");
         return;
       }
 
