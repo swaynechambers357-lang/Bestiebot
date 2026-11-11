@@ -126,7 +126,7 @@ function demoRiskCheck() {
   const stake = numberValue("#stake", 0);
   if (!Number.isFinite(stake) || stake <= 0 || stake > MAX_DEMO_STAKE) return "DEMO STAKE MUST BE BETWEEN $0.01 AND $1.00";
   if (demoTrades >= MAX_DEMO_TRADES) return "DEMO TRADE LIMIT REACHED";
-  if (actualDemoPL <= -MAX_DEMO_SESSION_LOSS) return "DEMO LOSS LIMIT REACHED";
+  if (actualDemoPL - stake < -MAX_DEMO_SESSION_LOSS) return "DEMO LOSS LIMIT REACHED";
   return null;
 }
 
