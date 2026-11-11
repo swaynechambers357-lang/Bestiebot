@@ -119,6 +119,17 @@ let demoWins = 0;
 let demoLosses = 0;
 
 const MAX_DEMO_TRADES = 20;
+const MAX_DEMO_STAKE = 1;
+const MAX_DEMO_SESSION_LOSS = 5;
+
+function demoRiskCheck() {
+  const stake = numberValue("#stake", 0);
+  if (!Number.isFinite(stake) || stake <= 0 || stake > MAX_DEMO_STAKE) return "DEMO STAKE MUST BE BETWEEN $0.01 AND $1.00";
+  if (demoTrades >= MAX_DEMO_TRADES) return "DEMO TRADE LIMIT REACHED";
+  if (actualDemoPL <= -MAX_DEMO_SESSION_LOSS) return "DEMO LOSS LIMIT REACHED";
+  return null;
+}
+
 
 
 /* =========================================================
@@ -1389,6 +1400,16 @@ function detectAccountMode(account) {
    ========================================================= */
 
 function requestDemoProposal(direction) {
+  if (!demoTradeEnabled) return false;
+  const riskError = demoRiskCheck();
+  if (riskError) {
+    demoTradeEnabled = false;
+    setDisabled("#startDemoTrades", false);
+    setDisabled("#stopDemoTrades", true);
+    setText("#demoTradeStatus", riskError);
+    return false;
+  }
+
   if (
     !demoTradeEnabled
   ) {
@@ -2051,12 +2072,11 @@ function testSignal(price) {
       const sent =
         requestDemoProposal(s);
 
-      setText(
-        "#demoTradeStatus",
-        sent
-          ? "Actual demo trading: PROPOSAL SENT • " + s
-          : "Actual demo trading: SIGNAL SEEN BUT PROPOSAL BLOCKED • " + s
-      );
+      if (sent) {
+        setText("#demoTradeStatus", "Actual demo trading: PROPOSAL SENT • " + s);
+      } else if (demoTradeEnabled) {
+        setText("#demoTradeStatus", "Actual demo trading: SIGNAL SEEN BUT PROPOSAL BLOCKED • " + s);
+      }
     }
 
     if (
@@ -3589,6 +3609,12 @@ if (startDemoButton) {
           "Actual demo trading: ENTER A VALID STAKE"
         );
 
+        return;
+      }
+
+      const startStake = numberValue("#stake", 0);
+      if (!Number.isFinite(startStake) || startStake <= 0 || startStake > MAX_DEMO_STAKE) {
+        setText("#demoTradeStatus", "DEMO STAKE MUST BE BETWEEN $0.01 AND $1.00");
         return;
       }
 
