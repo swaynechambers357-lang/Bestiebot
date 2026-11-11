@@ -1422,7 +1422,7 @@ if (
           const contractId = String(input?.contractId || "");
           const profit = Number(input?.profit);
           const direction = String(input?.direction || "");
-          if (!/^\\d{1,24}$/.test(contractId) ||
+          if (!/^\d{1,24}$/.test(contractId) ||
               !Number.isFinite(profit) || Math.abs(profit) > 100 ||
               !["RISE", "FALL"].includes(direction)) {
             return json(res, 400, { error: "Invalid demo trade summary" });
