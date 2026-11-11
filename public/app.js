@@ -362,72 +362,13 @@ function showTradeMessage(profit) {
    PAPER MEMORY
    ========================================================= */
 
-function savePaperState() {
-  try {
-    localStorage.setItem(
-      "bestiePaperState",
-      JSON.stringify({
-        tests,
-        wins,
-        losses,
-        startingCapital,
-        currentCapital
-      })
-    );
-  } catch (e) {
-    console.log(
-      "Paper memory could not be saved",
-      e
-    );
-  }
-}
-
+// Session-only statistics: never restore old trade results after a refresh.
+function savePaperState() {}
 function loadPaperState() {
-  try {
-    const raw =
-      localStorage.getItem(
-        "bestiePaperState"
-      );
-
-    if (!raw) return;
-
-    const saved =
-      JSON.parse(raw);
-
-    tests =
-      Number(saved.tests) || 0;
-
-    wins =
-      Number(saved.wins) || 0;
-
-    losses =
-      Number(saved.losses) || 0;
-
-    startingCapital =
-      Number(
-        saved.startingCapital
-      ) || 20;
-
-    currentCapital =
-      Number(
-        saved.currentCapital
-      );
-
-    if (
-      !Number.isFinite(
-        currentCapital
-      )
-    ) {
-      currentCapital =
-        startingCapital;
-    }
-
-  } catch (e) {
-    console.log(
-      "Paper memory could not be loaded",
-      e
-    );
-  }
+  try { localStorage.removeItem("bestiePaperState"); } catch (e) {}
+  tests = 0; wins = 0; losses = 0;
+  pendingTest = null; cooldown = 0;
+  currentCapital = startingCapital;
 }
 
 
@@ -737,66 +678,18 @@ function displayStrategy() {
    ========================================================= */
 
 function scoreboard() {
-  setText(
-    "#tests",
-    tests
-  );
-
-  setText(
-    "#record",
-    wins + " / " + losses
-  );
-
-  setText(
-    "#accuracy",
-    tests
-      ? Math.round(
-          wins /
-          tests *
-          100
-        ) + "%"
-      : "—"
-  );
+  // Only actual Deriv demo contracts count on the visible dashboard.
+  setText("#tests", demoTrades);
+  setText("#record", demoWins + " / " + demoLosses);
+  setText("#accuracy", demoTrades ? Math.round(demoWins / demoTrades * 100) + "%" : "—");
 }
 
 function bankroll() {
-  const stake =
-    Math.max(
-      0,
-      numberValue(
-        "#stake",
-        0
-      )
-    );
-
-  setText(
-    "#currentCapital",
-    money(currentCapital)
-  );
-
-  const paperPL =
-    currentCapital -
-    startingCapital;
-
-  setText(
-    "#sessionPL",
-    signedMoney(paperPL)
-  );
-
-  setText(
-    "#actualPL",
-    signedMoney(
-      actualDemoPL
-    )
-  );
-
-  setText(
-    "#bankrollStatus",
-    stake > 0 &&
-    currentCapital >= stake
-      ? "READY"
-      : "CAN'T FUND NEXT TEST"
-  );
+  const stake = Math.max(0, numberValue("#stake", 0));
+  setText("#currentCapital", money(currentCapital));
+  setText("#sessionPL", signedMoney(actualDemoPL));
+  setText("#actualPL", signedMoney(actualDemoPL));
+  setText("#bankrollStatus", stake > 0 && currentCapital >= stake ? "READY" : "CAN'T FUND NEXT TEST");
 }
 
 
@@ -2949,6 +2842,7 @@ async function connectFeed() {
             activeDemoSubscriptionId =
               null;
 
+            scoreboard();
             bankroll();
 
             if (
@@ -3623,6 +3517,8 @@ if (startDemoButton) {
       demoLosses = 0;
 
       actualDemoPL = 0;
+      scoreboard();
+      bankroll();
 
       demoTradePending =
         false;
