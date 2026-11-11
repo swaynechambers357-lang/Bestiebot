@@ -1382,6 +1382,66 @@ if (
 
 
         /* =================================================
+           COMMAND CENTER — AUTHENTICATED DEMO JOURNAL
+           Read-only retrieval; browser may submit settled demo
+           contract summaries. Never accepts trading commands.
+           Data is process-memory only and resets on redeploy.
+           ================================================= */
+
+        if (u.pathname === "/api/command-center/trades") {
+          if (!requireAuthentication(session, res)) return;
+
+          if (req.method === "GET") {
+            return json(res, 200, {
+              mode: "DEMO_ONLY",
+              storage: "volatile",
+              realExecutionEnabled: REAL_TRADING_ENABLED,
+              trades: session.demoJournal || []
+            });
+          }
+
+          if (!methodAllowed(req, res, ["POST"])) return;
+
+          // Same-origin writes only. OAuth cookie alone is not a CSRF defense.
+          const origin = req.headers.origin;
+          const expectedOrigin = BASE_URL || `https://${req.headers.host}`;
+          if (!origin || origin !== expectedOrigin ||
+              !String(req.headers["content-type"] || "").startsWith("application/json")) {
+            return json(res, 403, { error: "Same-origin JSON required" });
+          }
+
+          let raw = "";
+          for await (const chunk of req) {
+            raw += chunk.toString("utf8");
+            if (raw.length > 4096) return json(res, 413, { error: "Payload too large" });
+          }
+          let input;
+          try { input = JSON.parse(raw); }
+          catch { return json(res, 400, { error: "Invalid JSON" }); }
+
+          const contractId = String(input?.contractId || "");
+          const profit = Number(input?.profit);
+          const direction = String(input?.direction || "");
+          if (!/^\\d{1,24}$/.test(contractId) ||
+              !Number.isFinite(profit) || Math.abs(profit) > 100 ||
+              !["RISE", "FALL"].includes(direction)) {
+            return json(res, 400, { error: "Invalid demo trade summary" });
+          }
+
+          const journal = session.demoJournal ||= [];
+          if (!journal.some(t => t.contractId === contractId)) {
+            journal.push({
+              contractId, direction, profit,
+              outcome: profit > 0 ? "WIN" : profit < 0 ? "LOSS" : "FLAT",
+              recordedAt: new Date().toISOString()
+            });
+            if (journal.length > 200) journal.shift();
+          }
+          return json(res, 200, { ok: true, count: journal.length });
+        }
+
+
+        /* =================================================
            LOGOUT
            ================================================= */
 
