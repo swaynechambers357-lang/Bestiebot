@@ -2798,6 +2798,21 @@ async function connectFeed() {
                 contract.profit
               ) || 0;
 
+            // Journal completed DEMO trades on the authenticated server.
+            // The visible scoreboard still resets on browser refresh.
+            if (activeDemoContractId && pendingDemoDirection) {
+              fetch("/api/command-center/trades", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contractId: String(activeDemoContractId),
+                  direction: pendingDemoDirection,
+                  profit
+                })
+              }).catch(() => {});
+            }
+
             actualDemoPL +=
               profit;
 
