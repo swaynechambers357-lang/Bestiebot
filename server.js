@@ -1388,6 +1388,63 @@ if (
            Data is process-memory only and resets on redeploy.
            ================================================= */
 
+        if (u.pathname === "/api/command-center/analysis") {
+          if (!methodAllowed(req, res, ["GET"])) return;
+          if (!requireAuthentication(session, res)) return;
+
+          const trades = session.demoJournal || [];
+          let wins = 0, losses = 0, flats = 0, netProfit = 0;
+          let lossStreak = 0, maxLossStreak = 0;
+          let runningProfit = 0, peakProfit = 0, maxDrawdown = 0;
+          const byDirection = {
+            RISE: { trades: 0, wins: 0, losses: 0, netProfit: 0 },
+            FALL: { trades: 0, wins: 0, losses: 0, netProfit: 0 }
+          };
+
+          for (const trade of trades) {
+            const profit = trade.profit;
+            netProfit += profit;
+            runningProfit += profit;
+            peakProfit = Math.max(peakProfit, runningProfit);
+            maxDrawdown = Math.max(maxDrawdown, peakProfit - runningProfit);
+
+            const bucket = byDirection[trade.direction];
+            bucket.trades++;
+            bucket.netProfit += profit;
+            if (profit > 0) {
+              wins++;
+              bucket.wins++;
+              lossStreak = 0;
+            } else if (profit < 0) {
+              losses++;
+              bucket.losses++;
+              lossStreak++;
+              maxLossStreak = Math.max(maxLossStreak, lossStreak);
+            } else {
+              flats++;
+              lossStreak = 0;
+            }
+          }
+
+          const total = trades.length;
+          return json(res, 200, {
+            mode: "DEMO_ONLY",
+            storage: "volatile",
+            sampleSize: total,
+            wins, losses, flats,
+            winRate: total ? wins / total : null,
+            netProfit: Number(netProfit.toFixed(2)),
+            averageProfit: total ? Number((netProfit / total).toFixed(4)) : null,
+            maxConsecutiveLosses: maxLossStreak,
+            maxDrawdown: Number(maxDrawdown.toFixed(2)),
+            byDirection,
+            caution: total < 200
+              ? "Small sample: not evidence of a profitable strategy"
+              : "Past demo results do not predict future performance"
+          });
+        }
+
+
         if (u.pathname === "/api/command-center/trades") {
           if (!requireAuthentication(session, res)) return;
 
