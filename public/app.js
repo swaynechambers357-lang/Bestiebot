@@ -1404,6 +1404,8 @@ function requestDemoProposal(direction) {
   const riskError = demoRiskCheck();
   if (riskError) {
     demoTradeEnabled = false;
+    setDisabled("#startDemoTrades", false);
+    setDisabled("#stopDemoTrades", true);
     setText("#demoTradeStatus", riskError);
     return false;
   }
@@ -2070,12 +2072,11 @@ function testSignal(price) {
       const sent =
         requestDemoProposal(s);
 
-      setText(
-        "#demoTradeStatus",
-        sent
-          ? "Actual demo trading: PROPOSAL SENT • " + s
-          : "Actual demo trading: SIGNAL SEEN BUT PROPOSAL BLOCKED • " + s
-      );
+      if (sent) {
+        setText("#demoTradeStatus", "Actual demo trading: PROPOSAL SENT • " + s);
+      } else if (demoTradeEnabled) {
+        setText("#demoTradeStatus", "Actual demo trading: SIGNAL SEEN BUT PROPOSAL BLOCKED • " + s);
+      }
     }
 
     if (
