@@ -3432,7 +3432,7 @@ realProposalExpiryTimer = setTimeout(() => {
         "#liveTradeStatus",
         "LIVE: server safety lock is active • DEMO mode only"
       );
-      setDisabled("#connect", !account?.value);
+      setDisabled("#connect", true);
       return;
     }
 
